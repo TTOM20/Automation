@@ -1,0 +1,21 @@
+#Python3
+sudo apt-get install python3 -y
+sudo apt-get install python3-pip -y
+pip3 update -y
+
+
+#gui python 
+pip install pyautogui ctypes -y
+
+#pdf merge python 
+
+pip install img2pdf -y
+
+#ocr 
+sudo add-apt-repository ppa:alex-p/tesseract-ocr 
+sudo apt-get update 
+sudo apt install tesseract-ocr -y
+sudo apt install libtesseract-dev -y 
+
+#pdf merge 
+sudo apt install pdftk -y
