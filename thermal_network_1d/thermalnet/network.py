@@ -203,8 +203,11 @@ class ThermalNetwork:
             self._apply_fixed(a, b)
             t_new = np.linalg.solve(a, b)
             residual = float(np.max(np.abs(t_new - t)))
-            t = t + relaxation * (t_new - t) if self._is_nonlinear() else t_new
-            if residual < tol or not self._is_nonlinear():
+            if not self._is_nonlinear():
+                t, residual = t_new, 0.0     # 線形なら 1 回で厳密解
+                break
+            t = t + relaxation * (t_new - t)
+            if residual < tol:
                 break
         temps = {name: float(t[i]) for i, name in enumerate(self.nodes)}
         return Solution(temps, self, iterations, residual)
@@ -278,21 +281,46 @@ class ThermalNetwork:
         ta, tb = temps[br.a], temps[br.b]
         return (temps[a] - temps[b]) / br.value(ta, tb)
 
-    def total_resistance(self, source: str, sink: str, power: float = 1.0) -> float:
-        """source に power [W] を入れ sink を 0 degC 固定にしたときの合成熱抵抗。
+    def connected_nodes(self, start: str) -> set:
+        """start から枝をたどって到達できるノードの集合。"""
+        adjacency: Dict[str, set] = {}
+        for br in self.branches:
+            adjacency.setdefault(br.a, set()).add(br.b)
+            adjacency.setdefault(br.b, set()).add(br.a)
+        seen, stack = {start}, [start]
+        while stack:
+            current = stack.pop()
+            for nb in adjacency.get(current, ()):
+                if nb not in seen:
+                    seen.add(nb)
+                    stack.append(nb)
+        return seen
 
-        枝が線形な回路にのみ意味がある(非線形なら動作点ごとに変わる)。
+    def total_resistance(self, source: str, sink: str, power: float = 1.0,
+                         sink_temperature: float = 0.0) -> float:
+        """source に power [W] を入れ sink を固定したときの合成熱抵抗 [K/W]。
+
+        枝が線形な回路でのみ厳密。非線形な枝があると、動作点(ここでは
+        sink_temperature 付近で power [W] を流した状態)での値になる。
+
+        source から sink につながっていない場合は、行列が特異になる前に
+        分かりやすいエラーを出す。
         """
+        if source not in self.nodes or sink not in self.nodes:
+            raise KeyError(f"ノード {source} / {sink} が存在しません")
+        if sink not in self.connected_nodes(source):
+            raise ValueError(f"{source} から {sink} へ熱の経路がありません "
+                             "(回路が分断されています)")
         saved = {name: (node.fixed, node.heat) for name, node in self.nodes.items()}
         try:
             for node in self.nodes.values():
                 node.heat = 0.0
                 if node.fixed is not None:
                     node.fixed = None
-            self.nodes[sink].fixed = 0.0
+            self.nodes[sink].fixed = sink_temperature
             self.nodes[source].heat = power
-            sol = self.solve_steady(guess=0.0)
-            return sol[source] / power
+            sol = self.solve_steady(guess=sink_temperature)
+            return (sol[source] - sink_temperature) / power
         finally:
             for name, (fixed, heat) in saved.items():
                 self.nodes[name].fixed = fixed

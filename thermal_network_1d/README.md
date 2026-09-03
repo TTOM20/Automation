@@ -35,6 +35,7 @@ cd lessons && python lesson01_thermal_resistance.py
 | 06 | `lesson06_nonlinear.py` | 温度依存 h の反復解法 | Churchill–Chu、輻射、緩和係数 |
 | 07 | `lesson07_cfd_to_1d.py` | **CFD から 1D へ還元する型** | 拡がり抵抗、抵抗の抽出、適用範囲 |
 | 08 | `lesson08_project_heatsink.py` | 総合演習:空冷 CPU のフルモデル | フィン効率、流体昇温、感度分析、ファン曲線 |
+| 09 | `lesson09_model_editing.py` | **モデルファイルを編集して回す**実務ワークフロー | YAML モデル、値の上書き、スイープ、`h: auto` |
 
 各レッスンは単体で完結しており、実行すると解説・数値・検算がターミナルに出て、
 `figures/` に図が保存されます。**まずそのまま実行し、次に数値を書き換えて遊ぶ**のが
@@ -60,6 +61,58 @@ cd lessons && python lesson01_thermal_resistance.py
           → 適用範囲を明記する
 ```
 
+## モデルファイルで回す(lesson09 / `models/`)
+
+抵抗値を自分で計算しなくても、**熱伝導率・寸法・発熱量・温度指定・流量**を YAML に
+書けば熱回路が組み上がります。条件を振るのはコマンド 1 本です。
+
+```yaml
+nodes:
+  die:    {heat: 95, material: silicon, volume: 1.008e-7}   # 発熱 [W] と熱容量
+  air_in: {fixed: 30}                                       # 温度指定境界 [degC]
+
+elements:
+  - {name: die conduction, type: conduction, from: die, to: die_bottom,
+     material: silicon, thickness: 0.0007, size: 0.012}     # L/(kA) が自動計算
+  - {name: TIM1, type: interface, from: die_bottom, to: ihs_top,
+     resistivity: 0.6e-5, size: 0.012}                      # TIM のカタログ値
+  - {name: IHS spreading, type: spreading, from: ihs_top, to: ihs_mid,
+     material: copper, source_size: 0.012, plate_size: 0.035,
+     thickness: 0.003, h: auto}                             # 拡がり抵抗(h は自動整合)
+  - {name: fin convection, type: fin_array, from: fin_base, to: air_mean,
+     material: aluminum_6063, h: 38.9, fin_thickness: 0.0012,
+     fin_height: 0.040, fin_width: 0.060, n_fins: 22, base_area: 0.0036}
+  - {name: air caloric, type: flow, from: air_mean, to: air_in,
+     fluid: air, mass_flow: 0.00373, mean: true}            # 流体への排熱
+```
+
+```bash
+python -m thermalnet.model models/cpu_heatsink.yaml                  # 解いて内訳を表示
+python -m thermalnet.model models/cpu_heatsink.yaml --set nodes.die.heat=125
+python -m thermalnet.model models/cpu_heatsink.yaml \
+    --sweep "elements.air caloric.mass_flow=0.0015:0.008:12" --watch die
+python -m thermalnet.model models/power_module_liquid.yaml --transient --plot out.png
+```
+
+出力には**ノード温度・要素ごとの熱抵抗と温度降下・エネルギー収支・合成熱抵抗**が並びます。
+どこがボトルネックかが一目で分かる形です。
+
+同梱モデル:
+
+| ファイル | 内容 |
+|---|---|
+| `models/cpu_heatsink.yaml` | 空冷 CPU(拡がり抵抗・フィン効率・空気の昇温) |
+| `models/multilayer_wall.yaml` | 多層外壁と熱橋(並列枝の書き方) |
+| `models/enclosure_natural.yaml` | ファンレス筐体(自然対流の相関式 + 輻射、非線形) |
+| `models/power_module_liquid.yaml` | SiC パワーモジュールの水冷(`h: auto`、パルス負荷の過渡) |
+
+書式の全リファレンスは **`docs/model_format.md`**。要素の型は
+`resistance` / `conduction` / `cylinder` / `sphere` / `interface` / `contact` /
+`convection` / `radiation` / `fin_array` / `spreading` / `flow` の 11 種類です。
+
+作り間違い(温度指定境界がない、浮きノードがある、直列にすべき所を並列に書いた)は
+解く前に検出されます。
+
 ## ディレクトリ構成
 
 ```
@@ -73,8 +126,12 @@ thermal_network_1d/
 ├── exercises/
 │   ├── exercises.md         演習 6 問(答え合わせ用の数値つき)
 │   └── solutions/           解答スクリプト
-├── tests/test_thermalnet.py 解析解・保存則との検証テスト(19 件)
-├── docs/cheatsheet.md       公式・無次元数・よくあるミス一覧
+├── tests/
+│   ├── test_thermalnet.py   解析解・保存則との検証テスト(19 件)
+│   └── test_model.py        モデル定義層の検証テスト(20 件)
+├── docs/
+│   ├── cheatsheet.md        公式・無次元数・よくあるミス一覧
+│   └── model_format.md      モデルファイル書式リファレンス
 └── figures/                 実行すると図が出力される
 ```
 
@@ -116,8 +173,22 @@ net.add_resistor("case", "air",
 - 軸対称 FVM の格子収束と、`R_total = R_1d + R_spread` の分解
 - 拡がり抵抗の相関式(Lee et al.)が FVM 解と 10 % 以内で一致すること
 
+`tests/test_model.py` は 20 件で、モデル層を確認しています:
+
+- モデル層で組んだ回路が手で組んだ回路と厳密一致すること
+- 面積指定 (`area`/`size`/`width+length`/`diameter`) と材料指定の等価性
+- 境界なし・浮きノード・未知の型が**解く前に**弾かれること
+- `--set` による上書きと `disabled` の動作
+- `flow` の `mean` 係数、`lpm`/`cfm` の単位換算
+- `correlation` / `radiation` が相関式・Stefan–Boltzmann と一致すること
+- `h: auto` が `h_eq = 1/(R_downstream × A_plate)` を満たすこと
+- 同梱モデルすべてが解けてエネルギー保存すること、CLI が全機能で正常終了すること
+- `cpu_heatsink.yaml` が lesson08 の合成熱抵抗 0.640 K/W を再現すること
+
 ```bash
 python tests/test_thermalnet.py     # pytest なしでも動く
+python tests/test_model.py
+python run_all.py                   # レッスン + 演習 + テスト + モデルを全実行
 ```
 
 ## 次に読むもの

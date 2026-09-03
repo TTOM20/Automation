@@ -84,6 +84,23 @@ C_i dT_i/dt = Q_i + Σ_j (T_j - T_i)/R_ij
 | Bi > 0.1 で 1 ノード | 内部温度差ぶん過小評価 | ノードを分割する |
 | 過渡が定常に未到達 | R も C も同定を誤る | 最遅時定数の 5 倍まで回す |
 
+## モデルファイルで回すとき
+
+抵抗を手計算せず YAML に物理量を書く方法は `docs/model_format.md`。要点だけ:
+
+```bash
+python -m thermalnet.model models/cpu_heatsink.yaml
+python -m thermalnet.model models/cpu_heatsink.yaml --set nodes.die.heat=125
+python -m thermalnet.model models/cpu_heatsink.yaml --sweep nodes.die.heat=50:150:11 --watch die
+python -m thermalnet.model models/power_module_liquid.yaml --transient --plot out.png
+```
+
+- **直列にしたいなら中間ノードを挟む**。同じ 2 ノード間に 2 本書くと並列合成される
+- `type: flow` の `mean: true` は `1/(2ṁcp)`(平均温度基準)、`false` は `1/(ṁcp)`(出口基準)
+- `type: spreading` の `h` は `h: auto` にすると下流の合成抵抗から自動整合される
+- `correlation:` を使うと h が温度の関数になり自動で非線形反復になる
+- `disabled: true` でその要素だけ外して効果を切り分けられる
+
 ## 参考文献
 
 - Incropera & DeWitt, *Fundamentals of Heat and Mass Transfer* — 相関式と物性表の定番

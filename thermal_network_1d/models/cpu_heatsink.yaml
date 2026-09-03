@@ -1,0 +1,124 @@
+# 空冷 CPU の熱回路(lesson08 と同じ構成をモデルファイルにしたもの)
+#
+#   die -> TIM1 -> IHS(拡がり+伝導) -> TIM2 -> ヒートシンクベース(拡がり+伝導)
+#       -> フィン(対流) -> 空気(平均) -> 空気(入口, 温度指定)
+#
+# 使い方:
+#   python -m thermalnet.model models/cpu_heatsink.yaml
+#   python -m thermalnet.model models/cpu_heatsink.yaml --set nodes.die.heat=125
+#   python -m thermalnet.model models/cpu_heatsink.yaml \
+#       --sweep "elements.fin convection.h=20:80:7" --watch die
+
+name: 空冷 CPU クーラー
+
+nodes:
+  die:
+    heat: 95              # [W] 発熱量。ここを変えれば負荷条件が変わる
+    material: silicon
+    volume: 1.008e-7      # 12 x 12 x 0.7 mm
+  die_bottom: {}
+  ihs_top:
+    material: copper
+    volume: 3.675e-6      # 35 x 35 x 3 mm
+  ihs_mid: {}
+  ihs_bottom: {}
+  sink_base:
+    material: aluminum
+    volume: 4.27e-5       # ベース + フィンの体積相当
+  sink_mid: {}
+  fin_base: {}
+  air_mean: {}
+  air_in:
+    fixed: 30             # [degC] 吸気温度(温度指定境界)
+
+elements:
+  - name: die conduction
+    type: conduction
+    from: die
+    to: die_bottom
+    material: silicon     # k = 120 W/(m K)
+    thickness: 0.0007
+    size: 0.012           # 正方形の一辺 [m] (area: 1.44e-4 と書いても同じ)
+
+  - name: TIM1
+    type: interface
+    from: die_bottom
+    to: ihs_top
+    resistivity: 0.6e-5   # [m^2 K/W] TIM のカタログ値
+    size: 0.012
+
+  - name: IHS spreading
+    type: spreading       # 小さいダイから広い IHS へ熱が広がるときの抵抗
+    from: ihs_top
+    to: ihs_mid
+    material: copper
+    source_size: 0.012    # 正方形は同じ面積の円に換算される
+    plate_size: 0.035
+    thickness: 0.003
+    h: 3000               # IHS 裏面側の等価熱伝達率(下流の抵抗から見積もる)
+
+  # 拡がりと伝導は「直列」なので、間に中間ノード ihs_mid を挟むこと。
+  # 同じ 2 ノード間に 2 本書くと並列合成されてしまうので注意。
+  - name: IHS conduction
+    type: conduction
+    from: ihs_mid
+    to: ihs_bottom
+    material: copper
+    thickness: 0.003
+    size: 0.035
+
+  - name: TIM2
+    type: interface
+    from: ihs_bottom
+    to: sink_base
+    resistivity: 2.0e-5
+    size: 0.035
+
+  - name: sink base spreading
+    type: spreading
+    from: sink_base
+    to: sink_mid
+    material: aluminum_6063
+    source_size: 0.035
+    plate_size: 0.060
+    thickness: 0.006
+    h: 800
+
+  - name: sink base conduction
+    type: conduction
+    from: sink_mid
+    to: fin_base
+    material: aluminum_6063
+    thickness: 0.006
+    size: 0.060
+
+  - name: fin convection
+    type: fin_array
+    from: fin_base
+    to: air_mean
+    material: aluminum_6063
+    h: 38.9               # [W/(m^2 K)] 風速 2.5 m/s のダクト相関式から
+    # correlation: duct   # <- こう書けば相関式から自動計算(非線形になる)
+    # velocity: 2.5
+    # hydraulic_diameter: 0.00308
+    fin_thickness: 0.0012
+    fin_height: 0.040
+    fin_width: 0.060
+    n_fins: 22
+    base_area: 0.0036
+
+  - name: air caloric
+    type: flow            # 空気が熱をもらって昇温する分(1D 化で忘れやすい)
+    from: air_mean
+    to: air_in
+    fluid: air
+    mass_flow: 0.00373    # [kg/s]  (= 約 200 L/min)
+    mean: true            # air_mean は平均温度なので 1/(2 mdot cp)
+
+solve:
+  guess: 60
+
+transient:
+  t_end: 300
+  dt: 0.05
+  initial: 30

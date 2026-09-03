@@ -1,0 +1,78 @@
+# パワーモジュールの液冷 --- 拡がり抵抗 + 冷却水への排熱 + 過渡負荷
+#
+#   SiC チップ -> はんだ -> AlN 絶縁基板 -> はんだ -> 銅ベース -> TIM
+#       -> 冷却板 -> 水(平均) -> 水(入口)
+#
+#   python -m thermalnet.model models/power_module_liquid.yaml
+#   python -m thermalnet.model models/power_module_liquid.yaml \
+#       --transient --watch chip --plot /tmp/burst.png
+#   python -m thermalnet.model models/power_module_liquid.yaml \
+#       --sweep "elements.coolant caloric.lpm=1:8:8" --watch chip
+
+name: SiC パワーモジュール(水冷)
+
+nodes:
+  chip:
+    heat: 300                    # [W] 定常損失
+    heat_schedule:               # 過渡ではこちらが使われる(階段状の負荷)
+      - [0,   300]
+      - [10,  900]               # 10 s から 5 s 間だけ 900 W のパルス
+      - [15,  300]
+    material: sic
+    volume: 1.5e-7               # 10 x 10 x 0.15 mm x 10 チップ相当
+  chip_bottom: {}
+  substrate_top: {}
+  substrate_bottom: {}
+  base_top: {}
+  base_spread: {}
+  base_bottom: {}
+  cold_plate:
+    material: copper
+    mass: 1.2
+  water_mean: {}
+  water_in:
+    fixed: 45                    # 冷却水入口温度 [degC]
+
+elements:
+  - {name: chip conduction, type: conduction, from: chip, to: chip_bottom,
+     material: sic, thickness: 0.00015, area: 1.0e-3}
+
+  - {name: die solder, type: conduction, from: chip_bottom, to: substrate_top,
+     material: solder_sac, thickness: 0.0001, area: 1.0e-3}
+
+  # 小さいチップ群から広い絶縁基板へ広がる分(3D 効果を 1 本の抵抗にしたもの)
+  #
+  # 重要: spreading の h には「その板の下流にある合成抵抗」の等価熱伝達率が要る。
+  #   h_eq = 1 / (R_downstream x A_plate)
+  # 適当な値を入れると拡がり抵抗が数倍ずれる。h: auto と書けば、下流の合成抵抗から
+  # 自動で反復して整合させてくれる(結果は要素内訳に表示される)。
+  - {name: substrate spreading, type: spreading, from: substrate_top,
+     to: substrate_bottom, material: aln,
+     source_area: 1.0e-3, plate_area: 4.0e-3, thickness: 0.00064, h: auto}
+
+  - {name: substrate conduction, type: conduction, from: substrate_bottom,
+     to: base_top, material: aln, thickness: 0.00064, area: 4.0e-3}
+
+  - {name: base spreading, type: spreading, from: base_top, to: base_spread,
+     material: copper, source_area: 4.0e-3, plate_area: 0.012,
+     thickness: 0.003, h: auto}   # 同上、下流から自動決定
+
+  - {name: base conduction, type: conduction, from: base_spread, to: base_bottom,
+     material: copper, thickness: 0.003, area: 0.012}
+
+  - {name: TIM, type: interface, from: base_bottom, to: cold_plate,
+     resistivity: 3.0e-5, area: 0.012}
+
+  - {name: cold plate convection, type: convection, from: cold_plate,
+     to: water_mean, h: 6000, area: 0.024}     # 水冷なので h が桁違いに大きい
+
+  - {name: coolant caloric, type: flow, from: water_mean, to: water_in,
+     fluid: water, lpm: 4.0, mean: true}       # 流量 4 L/min
+
+solve:
+  guess: 70
+
+transient:
+  t_end: 60
+  dt: 0.01
+  initial: 45
