@@ -4,6 +4,7 @@
     python run_all.py lessons    # レッスンだけ
     python run_all.py tests      # テストだけ
     python run_all.py models     # モデルファイルだけ
+    python run_all.py reports    # レポート生成だけ (reports/ に出力)
     python run_all.py exercises  # 演習の解答だけ
 """
 
@@ -56,6 +57,21 @@ def main():
                 if subprocess.run([sys.executable, "-m", "thermalnet.model", rel],
                                   cwd=ROOT).returncode:
                     failures.append(rel)
+
+    if what in ("all", "reports"):
+        model_dir = os.path.join(ROOT, "models")
+        out_dir = os.path.join(ROOT, "reports")
+        os.makedirs(out_dir, exist_ok=True)
+        for name in sorted(os.listdir(model_dir)):
+            if not name.endswith((".yaml", ".yml", ".json")):
+                continue
+            rel = os.path.join("models", name)
+            out = os.path.join("reports", os.path.splitext(name)[0] + ".html")
+            print(f"\n{'=' * 78}\n>>> python -m thermalnet.report {rel} -o {out}\n"
+                  f"{'=' * 78}")
+            if subprocess.run([sys.executable, "-m", "thermalnet.report", rel,
+                               "-o", out], cwd=ROOT).returncode:
+                failures.append(out)
 
     print(f"\n{'=' * 78}")
     if failures:

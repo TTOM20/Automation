@@ -166,6 +166,22 @@ h_eq = 1 / (R_downstream × A_plate)
 
 ---
 
+## report --- レポート生成のオプション
+
+```yaml
+report:
+  limit: 100         # 設計上限温度 [degC]。合否判定に使う
+  target: die        # 評価対象ノード(省略時は最高温度のノードを自動選択)
+```
+
+```bash
+python -m thermalnet.report models/cpu_heatsink.yaml --limit 100 -o report.html
+```
+
+CLI の `--limit` / `--target` / `--title` はこのブロックより優先されます。
+発熱源のないモデル(壁など)では、投入熱量の代わりに境界を通過する熱量を基準に
+合成熱抵抗を計算します(U 値の評価に使えます)。
+
 ## solve / transient
 
 ```yaml
