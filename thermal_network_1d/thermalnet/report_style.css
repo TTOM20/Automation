@@ -1,0 +1,358 @@
+/* 熱設計レポートのスタイル。
+   トークンは bare :root(明)に全定義し、暗はトークンだけ再定義する。
+   OS 設定・テーマ切替の 3 状態すべてで解決するようにしてある。 */
+
+:root {
+  color-scheme: light;
+  /* 面と文字: 青みをわずかに含んだ中性色(計器のパネルの色) */
+  --plane:      #f2f4f5;
+  --surface:    #ffffff;
+  --surface-2:  #f7f9fa;
+  --ink:        #10141a;
+  --ink-2:      #4c555d;
+  --muted:      #7f8890;
+  --rule:       #dfe4e8;
+  --rule-soft:  #eaeef1;
+  /* データ系列(検証済みパレット) */
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --bar:        #2a78d6;
+  --bar-soft:   #9ec5f4;
+  --better:     #2a78d6;
+  --worse:      #e34948;
+  /* 状態 */
+  --good:     #0ca30c;
+  --warning:  #fab219;
+  --critical: #d03b3b;
+  --grid:     #e1e0d9;
+
+  --font-sans: "IBM Plex Sans JP", system-ui, -apple-system, "Segoe UI",
+               "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane:      #0c0f11;
+    --surface:    #15191c;
+    --surface-2:  #1b2024;
+    --ink:        #eef2f4;
+    --ink-2:      #b3bcc2;
+    --muted:      #8a939a;
+    --rule:       #272d31;
+    --rule-soft:  #1f2529;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --bar:      #3987e5;
+    --bar-soft: #256abf;
+    --better:   #3987e5;
+    --worse:    #e66767;
+    --grid:     #2c2c2a;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:      #0c0f11;
+  --surface:    #15191c;
+  --surface-2:  #1b2024;
+  --ink:        #eef2f4;
+  --ink-2:      #b3bcc2;
+  --muted:      #8a939a;
+  --rule:       #272d31;
+  --rule-soft:  #1f2529;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --bar:      #3987e5;
+  --bar-soft: #256abf;
+  --better:   #3987e5;
+  --worse:    #e66767;
+  --grid:     #2c2c2a;
+}
+
+body {
+  margin: 0;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+.doc {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+/* ---------------------------------------------------------- 見出し部 */
+.masthead { display: flex; flex-direction: column; gap: 10px; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.meta code { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left-width: 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.verdict strong { color: var(--ink); font-weight: 600; }
+.verdict-mark {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--muted); flex: none;
+}
+.verdict-good     { border-left-color: var(--good); }
+.verdict-good .verdict-mark { background: var(--good); }
+.verdict-warning  { border-left-color: var(--warning); }
+.verdict-warning .verdict-mark { background: var(--warning); }
+.verdict-critical { border-left-color: var(--critical); }
+.verdict-critical .verdict-mark { background: var(--critical); }
+.verdict-neutral  { border-left-color: var(--muted); }
+
+/* ---------------------------------------------------------- サマリ */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.tile { background: var(--surface); padding: 16px 18px 14px; }
+.tile-label {
+  font-size: 11.5px; letter-spacing: 0.06em; color: var(--muted);
+  text-transform: none;
+}
+.tile-value {
+  font-family: var(--font-mono);
+  font-size: 27px; font-weight: 500; line-height: 1.25; color: var(--ink);
+  margin-top: 2px;
+}
+.tile-unit {
+  font-size: 13px; color: var(--ink-2); margin-left: 5px; font-weight: 400;
+}
+.tile-note { font-size: 12px; color: var(--ink-2); margin-top: 3px; }
+
+/* ---------------------------------------------------------- 目次 */
+.toc {
+  display: flex; flex-wrap: wrap; gap: 4px 18px;
+  padding: 10px 0; border-block: 1px solid var(--rule);
+  font-family: var(--font-mono); font-size: 12.5px;
+}
+.toc a { color: var(--ink-2); text-decoration: none; }
+.toc a:hover { color: var(--s1); text-decoration: underline; }
+.toc a:focus-visible, .doc a:focus-visible {
+  outline: 2px solid var(--s1); outline-offset: 2px; border-radius: 2px;
+}
+
+/* ---------------------------------------------------------- 本文 */
+section { display: flex; flex-direction: column; gap: 14px; }
+
+h2 {
+  margin: 0;
+  font-size: 20px; font-weight: 600; letter-spacing: -0.005em;
+  display: flex; align-items: baseline; gap: 12px;
+}
+.sec-no {
+  font-family: var(--font-mono);
+  font-size: 13px; font-weight: 500; color: var(--s1);
+  border: 1px solid var(--rule); border-radius: 2px;
+  padding: 1px 7px; flex: none;
+}
+.appendix-head { color: var(--ink-2); }
+
+section > p { margin: 0; max-width: 68ch; color: var(--ink-2); }
+section > p strong { color: var(--ink); font-weight: 600; }
+
+/* ---------------------------------------------------------- 図 */
+.figure {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 14px 16px;
+  overflow-x: auto;
+}
+.chart { width: 100%; height: auto; display: block; min-width: 460px; }
+
+.grid { stroke: var(--grid); stroke-width: 1; }
+.zero-line { stroke: var(--muted); stroke-width: 1.5; }
+.tick { fill: var(--muted); font-size: 11px; font-family: var(--font-mono); }
+.bar { fill: var(--bar-soft); }
+.bar-strong { fill: var(--bar); }
+.bar-better { fill: var(--better); }
+.bar-worse { fill: var(--worse); }
+.bar-label { fill: var(--ink-2); font-size: 12px; }
+.bar-value {
+  fill: var(--ink); font-size: 12px; font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.line { fill: none; stroke: var(--s1); stroke-width: 2; stroke-linejoin: round; }
+.line.s1 { stroke: var(--s1); }
+.line.s2 { stroke: var(--s2); }
+.line.s3 { stroke: var(--s3); }
+.dot { fill: var(--s1); stroke: var(--surface); stroke-width: 2; }
+.dot.s1 { fill: var(--s1); }
+.dot.s2 { fill: var(--s2); }
+.dot.s3 { fill: var(--s3); }
+.point-label {
+  fill: var(--ink); font-size: 11px; font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.span-marker { fill: var(--surface); stroke: var(--s1); stroke-width: 1.5; }
+.span-no {
+  fill: var(--s1); font-size: 10.5px; font-family: var(--font-mono);
+  font-weight: 500;
+}
+.axis-title { fill: var(--muted); font-size: 11px; font-family: var(--font-sans); }
+.series-label { font-size: 12px; font-weight: 500; }
+.series-label.s1 { fill: var(--s1); }
+.series-label.s2 { fill: var(--s2); }
+.series-label.s3 { fill: var(--s3); }
+.shade { fill: var(--warning); opacity: 0.16; }
+[data-tip] { cursor: crosshair; }
+rect[data-tip]:hover, circle[data-tip]:hover { opacity: 0.82; }
+
+/* ---------------------------------------------------------- 表 */
+.table-wrap {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow-x: auto;
+}
+.table-wrap figcaption {
+  padding: 10px 16px;
+  font-size: 12.5px; color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-mono);
+}
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td {
+  padding: 8px 16px; text-align: left;
+  border-bottom: 1px solid var(--rule-soft);
+}
+th, td:first-child { white-space: nowrap; }
+.path-chain { white-space: normal; word-break: break-word; line-height: 1.6; }
+th {
+  font-size: 12px; font-weight: 500; color: var(--muted);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--rule);
+}
+td { color: var(--ink-2); }
+td:first-child { color: var(--ink); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface-2); }
+.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+td.num { color: var(--ink); }
+
+.chip {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 10.5px; line-height: 1.6;
+  padding: 0 6px; border-radius: 2px; margin-right: 4px;
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+.chip.on-path { border-color: var(--s1); color: var(--s1); }
+.chip.off-path { color: var(--muted); }
+.chip.nl { border-color: var(--s2); color: var(--s2); }
+.chip.status-good { border-color: var(--good); color: var(--good); }
+.chip.status-warning { border-color: var(--warning); color: var(--ink-2); }
+.chip.status-critical { border-color: var(--critical); color: var(--critical); }
+
+/* ---------------------------------------------------------- 前提 */
+.assumptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px 28px;
+}
+.assumption { border-top: 2px solid var(--rule); padding-top: 10px; }
+.assumption h3 {
+  margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--ink);
+}
+.assumption p { margin: 0; font-size: 13px; color: var(--ink-2); }
+
+/* ---------------------------------------------------------- 付録 */
+details {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 3px; padding: 10px 16px;
+}
+summary {
+  cursor: pointer; font-size: 13px; color: var(--ink-2);
+  font-family: var(--font-mono);
+}
+summary:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+pre {
+  overflow-x: auto; margin: 12px 0 4px;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.colophon {
+  border-top: 1px solid var(--rule); padding-top: 14px;
+  font-size: 12px; color: var(--muted);
+}
+.colophon p { margin: 0; max-width: 68ch; }
+
+/* ---------------------------------------------------------- ツールチップ */
+#tip {
+  position: fixed; z-index: 20; pointer-events: none;
+  opacity: 0; transition: opacity 0.1s;
+  background: var(--ink); color: var(--plane);
+  font-family: var(--font-mono); font-size: 11.5px;
+  padding: 4px 8px; border-radius: 3px; white-space: nowrap;
+}
+#tip.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  #tip { transition: none; }
+}
+
+@media (max-width: 640px) {
+  .doc { padding: 28px 16px 56px; }
+  h1 { font-size: 25px; }
+  .tile-value { font-size: 23px; }
+}

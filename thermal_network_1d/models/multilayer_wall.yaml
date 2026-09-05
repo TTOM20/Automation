@@ -1,0 +1,39 @@
+# 多層壁 + 熱橋(サーマルブリッジ)--- lesson02 のモデルファイル版
+#
+#   室内 -> 内表面 -> 石膏ボード -> [断熱材 || 木製スタッド] -> 合板 -> 外表面 -> 外気
+#
+#   python -m thermalnet.model models/multilayer_wall.yaml
+#   python -m thermalnet.model models/multilayer_wall.yaml \
+#       --set "elements.wood stud.disabled=true"      # 熱橋を外して比較
+#
+#   注: 柱を disabled にすると壁の 15 % が「穴」になる(断熱材の面積は 8.5 m^2 のまま)。
+#       「熱橋が無い理想的な壁」と比べたいなら、あわせて断熱材の面積も戻すこと:
+#       --set "elements.wood stud.disabled=true" --set "elements.glass wool.area=10.0"
+
+name: 多層外壁(熱橋あり)
+
+nodes:
+  room:    {fixed: 20}      # 室温 [degC]
+  surf_in: {}
+  n1:      {}
+  n2:      {}
+  surf_out: {}
+  outdoor: {fixed: -5}      # 外気温 [degC]
+
+elements:
+  - {name: inside film,  type: convection, from: room,     to: surf_in, h: 9,  area: 10.0}
+  - {name: gypsum,       type: conduction, from: surf_in,  to: n1, material: gypsum_board,
+     thickness: 0.0125, area: 10.0}
+
+  # 断熱層は「断熱材」と「柱」の並列。面積を分け合う点がポイント
+  - {name: glass wool,   type: conduction, from: n1, to: n2, material: glass_wool,
+     thickness: 0.100, area: 8.5}      # 壁面積の 85 %
+  - {name: wood stud,    type: conduction, from: n1, to: n2, material: wood_stud,
+     thickness: 0.100, area: 1.5}      # 残り 15 % が木の柱 = 熱橋
+
+  - {name: plywood,      type: conduction, from: n2, to: surf_out, material: plywood,
+     thickness: 0.012, area: 10.0}
+  - {name: outside film, type: convection, from: surf_out, to: outdoor, h: 23, area: 10.0}
+
+solve:
+  guess: 5

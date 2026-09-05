@@ -1,0 +1,55 @@
+# ファンレス筐体の自然空冷 --- lesson06 のモデルファイル版(非線形)
+#
+# correlation: を使うと熱伝達率が表面温度の関数になり、自動で反復解になる。
+#
+#   python -m thermalnet.model models/enclosure_natural.yaml
+#   python -m thermalnet.model models/enclosure_natural.yaml \
+#       --sweep nodes.component.heat=5:40:8 --watch component --watch case
+
+name: ファンレス筐体(200 x 150 x 50 mm)
+
+nodes:
+  component:
+    heat: 20              # [W]
+    material: aluminum
+    mass: 0.15            # 質量から熱容量を出す書き方
+  case:
+    material: aluminum
+    mass: 0.8
+  ambient:
+    fixed: 25
+
+elements:
+  - name: internal path
+    type: resistance      # 内部の伝導+接触をまとめて 1 本の抵抗で表現
+    from: component
+    to: case
+    value: 0.8
+
+  - name: conv side
+    type: convection
+    from: case
+    to: ambient
+    correlation: natural_vertical   # Churchill-Chu(垂直平板)
+    height: 0.050                   # 代表高さ [m]
+    area: 0.035                     # 側面積 [m^2]
+
+  - name: conv top
+    type: convection
+    from: case
+    to: ambient
+    correlation: natural_horizontal_up
+    area: 0.030
+    perimeter: 0.700                # 特性長 Lc = A/P が自動計算される
+    # char_length: 0.0429           # 直接書いてもよい
+
+  - name: radiation
+    type: radiation
+    from: case
+    to: ambient
+    emissivity: 0.85                # 黒アルマイト。0.05 にすると無処理アルミ
+    area: 0.065
+
+solve:
+  guess: 45
+  relaxation: 0.7

@@ -1,0 +1,1594 @@
+<title>熱回路スタジオ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --plane:     #eef1f3;
+  --surface:   #ffffff;
+  --panel:     #f7f9fa;
+  --raised:    #ffffff;
+  --ink:       #0f1419;
+  --ink-2:     #4b555c;
+  --muted:     #7d878e;
+  --rule:      #dde3e7;
+  --rule-soft: #e9edf0;
+  --accent:    #2a78d6;
+  --accent-soft: #dbe9fb;
+  --good:      #0ca30c;
+  --warning:   #fab219;
+  --critical:  #d03b3b;
+  --t-cold:    #2a78d6;
+  --t-mid:     #e6e3dd;
+  --t-hot:     #d03b3b;
+  --flow:      #eb6834;
+  --grid-dot:  #d7dde1;
+  --shadow:    0 1px 2px rgba(15,20,25,.06), 0 6px 18px rgba(15,20,25,.06);
+  --font: "IBM Plex Sans JP", system-ui, -apple-system, "Segoe UI",
+          "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane:     #0b0e10;
+    --surface:   #14181b;
+    --panel:     #171c1f;
+    --raised:    #1c2226;
+    --ink:       #e9eef1;
+    --ink-2:     #aab4bb;
+    --muted:     #7d878e;
+    --rule:      #262d31;
+    --rule-soft: #1f2529;
+    --accent:    #3987e5;
+    --accent-soft: #16304d;
+    --t-cold:    #3987e5;
+    --t-mid:     #3c4247;
+    --t-hot:     #e05a5a;
+    --flow:      #d95926;
+    --grid-dot:  #232a2e;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:     #0b0e10;
+  --surface:   #14181b;
+  --panel:     #171c1f;
+  --raised:    #1c2226;
+  --ink:       #e9eef1;
+  --ink-2:     #aab4bb;
+  --muted:     #7d878e;
+  --rule:      #262d31;
+  --rule-soft: #1f2529;
+  --accent:    #3987e5;
+  --accent-soft: #16304d;
+  --t-cold:    #3987e5;
+  --t-mid:     #3c4247;
+  --t-hot:     #e05a5a;
+  --flow:      #d95926;
+  --grid-dot:  #232a2e;
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--plane); color: var(--ink);
+  font-family: var(--font); font-size: 13.5px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* ---------------------------------------------------------- 骨格 */
+.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+.topbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.brand .sub { font-size: 11.5px; color: var(--muted); font-family: var(--mono); }
+
+.tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 4px; cursor: pointer;
+  background: var(--raised); color: var(--ink-2);
+  border: 1px solid var(--rule); font-size: 12.5px;
+}
+.btn:hover { border-color: var(--accent); color: var(--ink); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.btn.ghost { background: transparent; }
+.btn.danger:hover { border-color: var(--critical); color: var(--critical); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn .k {
+  font-family: var(--mono); font-size: 10px; opacity: .7;
+  border: 1px solid currentColor; border-radius: 2px; padding: 0 3px;
+}
+
+.layout {
+  display: grid; grid-template-columns: 214px minmax(0, 1fr) 310px;
+  gap: 1px; background: var(--rule); flex: 1; min-height: 0;
+}
+.pane { background: var(--panel); overflow-y: auto; }
+.pane.canvas-pane { background: var(--surface); position: relative; overflow: hidden; }
+
+.pane h2 {
+  margin: 0; padding: 11px 14px 7px;
+  font-size: 11px; font-weight: 600; letter-spacing: .09em;
+  color: var(--muted); text-transform: uppercase;
+}
+.pane h2:not(:first-child) { border-top: 1px solid var(--rule); margin-top: 8px; }
+
+/* ---------------------------------------------------------- パレット */
+.palette { display: flex; flex-direction: column; gap: 4px; padding: 0 10px 12px; }
+.palette-item {
+  display: grid; grid-template-columns: 26px 1fr; align-items: center;
+  gap: 9px; padding: 7px 9px; border-radius: 4px; cursor: pointer;
+  background: var(--raised); border: 1px solid var(--rule); text-align: left;
+}
+.palette-item:hover { border-color: var(--accent); }
+.palette-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.palette-item .pi-name { font-size: 12.5px; color: var(--ink); }
+.palette-item .pi-sub {
+  font-size: 10.5px; color: var(--muted); font-family: var(--mono);
+  display: block; line-height: 1.35;
+}
+.palette-item svg { display: block; }
+
+.preset-list { display: flex; flex-direction: column; gap: 4px; padding: 0 10px 14px; }
+.preset {
+  padding: 7px 10px; border-radius: 4px; cursor: pointer; text-align: left;
+  background: var(--raised); border: 1px solid var(--rule);
+  font-size: 12.5px; color: var(--ink);
+}
+.preset:hover { border-color: var(--accent); }
+.preset small { display: block; color: var(--muted); font-size: 10.5px; }
+
+/* ---------------------------------------------------------- キャンバス */
+.canvas-wrap { position: absolute; inset: 0; }
+#canvas {
+  width: 100%; height: 100%; display: block; touch-action: none;
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+#canvas.mode-connect { cursor: crosshair; }
+#canvas.mode-add { cursor: copy; }
+
+.node-box { fill: var(--raised); stroke-width: 1.5; }
+.node-box.selected { stroke-width: 2.5; }
+.node-name { fill: var(--ink); font-size: 12px; font-weight: 500; }
+.node-temp {
+  fill: var(--ink); font-size: 15px; font-family: var(--mono); font-weight: 500;
+}
+.node-badge { fill: var(--muted); font-size: 10px; font-family: var(--mono); }
+.node-hit { fill: transparent; cursor: grab; }
+.node-hit:active { cursor: grabbing; }
+.ground-bar { stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; }
+
+.edge-line { stroke: var(--muted); fill: none; stroke-linecap: round; }
+.edge-flow { stroke: var(--flow); fill: none; stroke-linecap: round; opacity: .95; }
+.edge-hit { stroke: transparent; fill: none; stroke-width: 18px; cursor: pointer; }
+.edge-line.selected, .edge-flow.selected { stroke: var(--accent); }
+.edge-label {
+  fill: var(--ink-2); font-size: 10.5px; font-family: var(--mono);
+  paint-order: stroke; stroke: var(--surface); stroke-width: 3px;
+}
+.edge-pending { stroke: var(--accent); stroke-dasharray: 5 4; fill: none; }
+@media (prefers-reduced-motion: reduce) { .edge-flow { animation: none !important; } }
+
+.legend {
+  position: absolute; left: 14px; bottom: 14px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 5px;
+  padding: 8px 11px; box-shadow: var(--shadow); font-size: 11px;
+}
+.legend-title { color: var(--muted); font-size: 10.5px; margin-bottom: 5px; }
+.legend-bar {
+  height: 9px; width: 168px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--t-cold), var(--t-mid), var(--t-hot));
+}
+.legend-scale {
+  display: flex; justify-content: space-between; margin-top: 3px;
+  font-family: var(--mono); color: var(--ink-2); font-size: 10.5px;
+}
+.hint {
+  position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
+  background: var(--accent); color: #fff; border-radius: 4px;
+  padding: 5px 12px; font-size: 12px; box-shadow: var(--shadow);
+}
+.hint[hidden] { display: none; }
+
+.playbar {
+  position: absolute; right: 14px; bottom: 14px;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 5px;
+  padding: 7px 11px; box-shadow: var(--shadow);
+}
+.playbar input[type="range"] { width: 150px; accent-color: var(--accent); }
+.playbar .t-read {
+  font-family: var(--mono); font-size: 12px; min-width: 76px; color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------- フォーム */
+.form { display: flex; flex-direction: column; gap: 9px; padding: 4px 14px 16px; }
+.field { display: grid; grid-template-columns: 1fr 108px; align-items: center; gap: 8px; }
+.field > label { font-size: 12px; color: var(--ink-2); }
+.field .unit { font-size: 10.5px; color: var(--muted); font-family: var(--mono); }
+.field input[type="text"], .field input[type="number"], .field select {
+  width: 100%; padding: 4px 7px; border-radius: 3px;
+  border: 1px solid var(--rule); background: var(--surface);
+  font-family: var(--mono); font-size: 12px;
+}
+.field input:focus, .field select:focus {
+  outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent);
+}
+.field.wide { grid-template-columns: 1fr; }
+.check { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.check input { accent-color: var(--accent); width: 14px; height: 14px; }
+
+.readout {
+  margin: 2px 14px 12px; padding: 9px 11px; border-radius: 4px;
+  background: var(--accent-soft); border: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 12px; color: var(--ink);
+}
+.readout b { font-weight: 500; }
+.readout .r-sub { color: var(--ink-2); font-size: 11px; display: block; }
+
+.empty {
+  padding: 16px 14px; color: var(--muted); font-size: 12.5px;
+}
+
+/* ---------------------------------------------------------- 結果 */
+.stat-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--rule); border-block: 1px solid var(--rule);
+}
+.stat { background: var(--panel); padding: 9px 14px; }
+.stat .s-label { font-size: 10.5px; color: var(--muted); }
+.stat .s-value {
+  font-family: var(--mono); font-size: 17px; font-weight: 500; line-height: 1.3;
+}
+.stat .s-value small { font-size: 11px; color: var(--ink-2); margin-left: 3px; }
+.stat.is-good .s-value { color: var(--good); }
+.stat.is-warning .s-value { color: var(--ink); }
+.stat.is-critical .s-value { color: var(--critical); }
+
+table.grid { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.grid th, table.grid td {
+  padding: 4px 14px; text-align: left; border-bottom: 1px solid var(--rule-soft);
+  white-space: nowrap;
+}
+table.grid th { color: var(--muted); font-weight: 500; font-size: 10.5px; }
+table.grid td.n {
+  text-align: right; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+table.grid tr.clickable { cursor: pointer; }
+table.grid tr.clickable:hover td { background: var(--raised); }
+table.grid tr.on-path td:first-child { box-shadow: inset 3px 0 var(--accent); }
+
+.rbar { display: block; height: 4px; border-radius: 2px; background: var(--accent); }
+.rbar.off { background: var(--muted); opacity: .45; }
+
+.msg {
+  margin: 10px 14px; padding: 8px 11px; border-radius: 4px; font-size: 12px;
+  border: 1px solid var(--critical); color: var(--critical);
+  background: color-mix(in srgb, var(--critical) 8%, transparent);
+}
+.msg.warn { border-color: var(--warning); color: var(--ink); }
+
+details.io { margin: 6px 14px 18px; }
+details.io summary {
+  cursor: pointer; font-size: 12px; color: var(--ink-2); font-family: var(--mono);
+}
+details.io textarea {
+  width: 100%; height: 150px; margin-top: 8px; padding: 8px;
+  font-family: var(--mono); font-size: 11px; border-radius: 4px;
+  border: 1px solid var(--rule); background: var(--surface); resize: vertical;
+}
+.io-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+.chart-box { padding: 6px 10px 12px; }
+.chart-box svg { width: 100%; height: auto; display: block; }
+.tl-grid { stroke: var(--rule); stroke-width: 1; }
+.tl-tick { fill: var(--muted); font-size: 9px; font-family: var(--mono); }
+.tl-line { fill: none; stroke-width: 2; stroke-linejoin: round; }
+
+@media (max-width: 1080px) {
+  .app { height: auto; overflow: visible; }
+  .layout { grid-template-columns: 1fr; grid-template-rows: auto 62vh auto; }
+  .pane { max-height: 46vh; }
+  .pane.canvas-pane { max-height: none; }
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <h1>熱回路スタジオ</h1>
+      <span class="sub">1D thermal network · 節点法ソルバ内蔵</span>
+    </div>
+    <div class="tools" role="toolbar" aria-label="編集ツール">
+      <button class="btn" id="tool-select" aria-pressed="true">選択 <span class="k">V</span></button>
+      <button class="btn" id="tool-add" aria-pressed="false">ノード追加 <span class="k">N</span></button>
+      <button class="btn" id="tool-connect" aria-pressed="false">つなぐ <span class="k">C</span></button>
+      <button class="btn danger ghost" id="btn-delete">削除 <span class="k">Del</span></button>
+      <button class="btn ghost" id="btn-tidy">整列</button>
+      <button class="btn ghost" id="btn-clear">全消去</button>
+    </div>
+    <div class="tools">
+      <button class="btn" id="mode-steady" aria-pressed="true">定常</button>
+      <button class="btn" id="mode-transient" aria-pressed="false">過渡</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- ------------------------------------------------ 左: 部品 -->
+    <aside class="pane">
+      <h2>要素を足す</h2>
+      <p class="empty" style="padding-top:0">2 つのノードを選ぶと、その間に要素を作ります。</p>
+      <div class="palette" id="palette"></div>
+
+      <h2>例題を読み込む</h2>
+      <div class="preset-list" id="presets"></div>
+
+      <h2>使い方</h2>
+      <p class="empty" style="padding-top:0;line-height:1.7">
+        ノードは<b>ドラッグ</b>で移動。<br>
+        <b>N</b> で空白をクリック → ノード追加。<br>
+        <b>C</b> でノード A → B をクリック → 要素追加。<br>
+        枝の<b>太さ</b>が熱流の大きさ、<b>流れる破線</b>が熱の向き。<br>
+        右パネルの数値はその場で反映されます。
+      </p>
+    </aside>
+
+    <!-- ------------------------------------------------ 中央: 回路 -->
+    <main class="pane canvas-pane">
+      <div class="canvas-wrap">
+        <svg id="canvas" role="application" aria-label="熱回路図"></svg>
+      </div>
+      <div class="hint" id="hint" hidden></div>
+      <div class="legend">
+        <div class="legend-title">ノード温度 [degC]</div>
+        <div class="legend-bar"></div>
+        <div class="legend-scale"><span id="leg-min">–</span><span id="leg-max">–</span></div>
+      </div>
+      <div class="playbar" id="playbar" hidden>
+        <button class="btn" id="btn-play">再生</button>
+        <input type="range" id="time-slider" min="0" max="100" value="0" aria-label="時刻">
+        <span class="t-read" id="time-read">t = 0 s</span>
+      </div>
+    </main>
+
+    <!-- ------------------------------------------------ 右: 設定と結果 -->
+    <aside class="pane">
+      <h2 id="prop-title">プロパティ</h2>
+      <div id="prop-body"><p class="empty">ノードか要素を選ぶと、ここで編集できます。</p></div>
+
+      <h2>結果</h2>
+      <div id="messages"></div>
+      <div class="stat-row" id="stats"></div>
+      <div id="transient-panel" hidden>
+        <h2>時間応答</h2>
+        <div class="chart-box" id="timeline"></div>
+        <div class="form" style="padding-top:0">
+          <div class="field"><label for="tr-end">計算時間</label>
+            <input type="number" id="tr-end" value="600" min="1" step="10"><span class="unit">s</span></div>
+          <div class="field"><label for="tr-dt">時間刻み</label>
+            <input type="number" id="tr-dt" value="0.5" min="0.001" step="0.1"><span class="unit">s</span></div>
+          <div class="field"><label for="tr-init">初期温度</label>
+            <input type="number" id="tr-init" value="25" step="1"><span class="unit">degC</span></div>
+        </div>
+      </div>
+      <div id="results"></div>
+
+      <h2>判定</h2>
+      <div class="form">
+        <div class="field"><label for="limit">設計上限温度</label>
+          <input type="number" id="limit" value="100" step="5"><span class="unit">degC</span></div>
+      </div>
+
+      <h2>入出力</h2>
+      <details class="io">
+        <summary>YAML で書き出す(Python 版 thermalnet 用)</summary>
+        <textarea id="yaml-out" readonly spellcheck="false"></textarea>
+        <div class="io-actions"><button class="btn" id="btn-copy-yaml">コピー</button></div>
+      </details>
+      <details class="io">
+        <summary>JSON で保存 / 読み込み</summary>
+        <textarea id="json-io" spellcheck="false"></textarea>
+        <div class="io-actions">
+          <button class="btn" id="btn-copy-json">コピー</button>
+          <button class="btn" id="btn-load-json">読み込む</button>
+        </div>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. 物性と相関式 (Python 版 thermalnet/elements.py, fluids.py と同じ式)
+   ===================================================================== */
+const SIGMA = 5.670374419e-8, T_ABS = 273.15, G_ACC = 9.80665;
+
+const MATERIALS = {
+  "アルミ (167)":    { k: 167,  rho: 2700, cp: 900  },
+  "アルミ合金 (200)": { k: 200,  rho: 2700, cp: 900  },
+  "銅 (390)":        { k: 390,  rho: 8933, cp: 385  },
+  "鋼 (50)":         { k: 50,   rho: 7850, cp: 470  },
+  "ステンレス (15)":  { k: 15,   rho: 7900, cp: 477  },
+  "シリコン (120)":   { k: 120,  rho: 2330, cp: 700  },
+  "SiC (370)":       { k: 370,  rho: 3210, cp: 690  },
+  "AlN (170)":       { k: 170,  rho: 3260, cp: 740  },
+  "はんだ (58)":      { k: 58,   rho: 7400, cp: 230  },
+  "FR4 基板 (0.35)":  { k: 0.35, rho: 1900, cp: 1150 },
+  "樹脂 ABS (0.2)":   { k: 0.2,  rho: 1050, cp: 1400 },
+  "グラスウール (0.04)": { k: 0.04, rho: 20, cp: 840 },
+  "石膏ボード (0.22)": { k: 0.22, rho: 800,  cp: 1000 },
+  "合板 (0.15)":      { k: 0.15, rho: 550,  cp: 1600 },
+  "木材 / 柱 (0.13)":  { k: 0.13, rho: 500,  cp: 1600 },
+  "ガラス (1.0)":     { k: 1.0,  rho: 2500, cp: 750  },
+  "空気 (0.026)":     { k: 0.026, rho: 1.16, cp: 1007 },
+  "水 (0.6)":         { k: 0.6,  rho: 997,  cp: 4180 },
+};
+const FLUIDS = { "空気": { cp: 1007, rho: 1.16 }, "水": { cp: 4180, rho: 997 },
+                 "50% グリコール": { cp: 3300, rho: 1060 }, "油": { cp: 2000, rho: 860 } };
+
+/* 1 atm 空気の物性 (Incropera 表 A.4 を線形補間) */
+const AIR_T   = [250, 300, 350, 400, 450, 500];
+const AIR_K   = [.02227, .02624, .03003, .03365, .03707, .04038];
+const AIR_NU  = [11.44e-6, 15.89e-6, 20.92e-6, 26.41e-6, 32.39e-6, 38.79e-6];
+const AIR_PR  = [.720, .707, .700, .690, .686, .684];
+function interp(xs, ys, x) {
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs[xs.length - 1]) return ys[ys.length - 1];
+  for (let i = 1; i < xs.length; i++) {
+    if (x <= xs[i]) {
+      const f = (x - xs[i - 1]) / (xs[i] - xs[i - 1]);
+      return ys[i - 1] + f * (ys[i] - ys[i - 1]);
+    }
+  }
+  return ys[ys.length - 1];
+}
+function airProps(tC) {
+  const tk = Math.min(Math.max(tC + T_ABS, 250), 500);
+  const nu = interp(AIR_T, AIR_NU, tk), pr = interp(AIR_T, AIR_PR, tk);
+  return { k: interp(AIR_T, AIR_K, tk), nu: nu, Pr: pr, alpha: nu / pr, beta: 1 / tk };
+}
+/* 垂直平板の自然対流 (Churchill & Chu) */
+function hNaturalVertical(ts, tf, height) {
+  const dt = Math.abs(ts - tf);
+  if (dt < 1e-9 || height <= 0) return 1e-6;
+  const p = airProps(0.5 * (ts + tf));
+  const ra = G_ACC * p.beta * dt * Math.pow(height, 3) / (p.nu * p.alpha);
+  const den = Math.pow(1 + Math.pow(0.492 / p.Pr, 9 / 16), 8 / 27);
+  return Math.pow(0.825 + 0.387 * Math.pow(ra, 1 / 6) / den, 2) * p.k / height;
+}
+/* 上向き高温水平面 */
+function hNaturalHorizontal(ts, tf, lc) {
+  const dt = Math.abs(ts - tf);
+  if (dt < 1e-9 || lc <= 0) return 1e-6;
+  const p = airProps(0.5 * (ts + tf));
+  const ra = G_ACC * p.beta * dt * Math.pow(lc, 3) / (p.nu * p.alpha);
+  const nu = ra <= 1e7 ? 0.54 * Math.pow(ra, 0.25) : 0.15 * Math.pow(ra, 1 / 3);
+  return nu * p.k / lc;
+}
+/* 平板の強制対流 (平均 Nu) */
+function hFlatPlate(vel, len, tfilm) {
+  if (vel <= 0 || len <= 0) return 1e-6;
+  const p = airProps(tfilm), re = vel * len / p.nu;
+  const nu = re < 5e5 ? 0.664 * Math.sqrt(re) * Math.cbrt(p.Pr)
+                      : (0.037 * Math.pow(re, 0.8) - 871) * Math.cbrt(p.Pr);
+  return Math.max(nu, 0.1) * p.k / len;
+}
+/* ダクト内 (フィン間流路) */
+function hDuct(vel, dh, tfilm) {
+  if (vel <= 0 || dh <= 0) return 1e-6;
+  const p = airProps(tfilm), re = vel * dh / p.nu;
+  const nu = re < 2300 ? 4.36 : 0.023 * Math.pow(re, 0.8) * Math.pow(p.Pr, 0.4);
+  return nu * p.k / dh;
+}
+function hRadiation(eps, ts, tsur, view) {
+  const a = ts + T_ABS, b = tsur + T_ABS;
+  return eps * (view || 1) * SIGMA * (a + b) * (a * a + b * b);
+}
+function finEfficiency(h, k, t, L) {
+  const lc = L + t / 2, m = Math.sqrt(2 * h / (k * t));
+  return Math.tanh(m * lc) / (m * lc);
+}
+/* 有限厚み円板の拡がり抵抗 (Lee et al., 1995) */
+function spreadingDisk(a, b, t, k, h) {
+  if (!(a > 0 && b > a && t > 0 && k > 0 && h > 0)) return NaN;
+  const eps = a / b, tau = t / b, bi = h * b / k;
+  const lam = Math.PI + 1 / (eps * Math.sqrt(Math.PI));
+  const th = Math.tanh(lam * tau);
+  const phi = (th + lam / bi) / (1 + (lam / bi) * th);
+  return 0.5 * Math.pow(1 - eps, 1.5) * phi / (k * a * Math.sqrt(Math.PI));
+}
+
+/* =====================================================================
+   2. 要素の定義 —— 物理量を入れると熱抵抗 R [K/W] が出る
+   ===================================================================== */
+const MAT_NAMES = Object.keys(MATERIALS);
+const ELEMENTS = {
+  conduction: {
+    label: "伝導", hint: "R = L / (k A)", glyph: "cond",
+    fields: [
+      { key: "mat", label: "材料", type: "material" },
+      { key: "k", label: "熱伝導率 k", unit: "W/(m·K)", def: 200 },
+      { key: "L", label: "厚さ L", unit: "m", def: 0.005 },
+      { key: "A", label: "断面積 A", unit: "m²", def: 0.0025 },
+    ],
+    R: p => p.L / (p.k * p.A),
+    note: p => `L/(kA) = ${fmt(p.L)}/(${fmt(p.k)}×${fmt(p.A)})`,
+  },
+  interface: {
+    label: "界面 / TIM", hint: "R = 熱抵抗率 / A", glyph: "tim",
+    fields: [
+      { key: "rho", label: "熱抵抗率", unit: "m²·K/W", def: 2e-5, step: 1e-6 },
+      { key: "A", label: "面積 A", unit: "m²", def: 0.0025 },
+    ],
+    R: p => p.rho / p.A,
+    note: p => `カタログ値 ${fmt(p.rho)} m²K/W を面積で割る`,
+  },
+  convection: {
+    label: "対流", hint: "R = 1 / (h A)", glyph: "conv",
+    fields: [
+      { key: "mode", label: "熱伝達率", type: "select", def: "fixed",
+        options: [["fixed", "直接指定"], ["nat_v", "自然対流(垂直平板)"],
+                  ["nat_h", "自然対流(上向き水平面)"], ["forced", "強制対流(平板)"],
+                  ["duct", "ダクト内(フィン間)"]] },
+      { key: "h", label: "熱伝達率 h", unit: "W/(m²·K)", def: 10, when: p => p.mode === "fixed" },
+      { key: "H", label: "代表高さ", unit: "m", def: 0.05, when: p => p.mode === "nat_v" },
+      { key: "Lc", label: "特性長 A/P", unit: "m", def: 0.04, when: p => p.mode === "nat_h" },
+      { key: "vel", label: "風速", unit: "m/s", def: 2.5, when: p => p.mode === "forced" || p.mode === "duct" },
+      { key: "Lp", label: "板の長さ", unit: "m", def: 0.06, when: p => p.mode === "forced" },
+      { key: "Dh", label: "水力直径", unit: "m", def: 0.003, when: p => p.mode === "duct" },
+      { key: "A", label: "伝熱面積 A", unit: "m²", def: 0.01 },
+    ],
+    h: (p, ts, tf) => {
+      switch (p.mode) {
+        case "nat_v": return hNaturalVertical(ts, tf, p.H);
+        case "nat_h": return hNaturalHorizontal(ts, tf, p.Lc);
+        case "forced": return hFlatPlate(p.vel, p.Lp, 0.5 * (ts + tf));
+        case "duct": return hDuct(p.vel, p.Dh, 0.5 * (ts + tf));
+        default: return p.h;
+      }
+    },
+    R: (p, ts, tf) => 1 / (Math.max(ELEMENTS.convection.h(p, ts, tf), 1e-9) * p.A),
+    nonlinear: p => p.mode !== "fixed",
+    note: (p, ts, tf) => `h = ${fmt(ELEMENTS.convection.h(p, ts, tf))} W/(m²K)`,
+  },
+  radiation: {
+    label: "輻射", hint: "R = 1 / (h_r A)", glyph: "rad",
+    fields: [
+      { key: "eps", label: "放射率 ε", unit: "–", def: 0.85, step: 0.05 },
+      { key: "F", label: "形態係数 F", unit: "–", def: 1, step: 0.05 },
+      { key: "A", label: "面積 A", unit: "m²", def: 0.01 },
+    ],
+    R: (p, ts, tf) => 1 / (Math.max(hRadiation(p.eps, ts, tf, p.F), 1e-9) * p.A),
+    nonlinear: () => true,
+    note: (p, ts, tf) => `h_r = ${fmt(hRadiation(p.eps, ts, tf, p.F))} W/(m²K)`,
+  },
+  fin_array: {
+    label: "フィン", hint: "フィン効率込みの対流", glyph: "fin",
+    fields: [
+      { key: "h", label: "熱伝達率 h", unit: "W/(m²·K)", def: 39 },
+      { key: "k", label: "フィンの k", unit: "W/(m·K)", def: 200 },
+      { key: "t", label: "フィン厚", unit: "m", def: 0.0012 },
+      { key: "L", label: "フィン高さ", unit: "m", def: 0.04 },
+      { key: "W", label: "フィン幅", unit: "m", def: 0.06 },
+      { key: "N", label: "枚数", unit: "枚", def: 22, step: 1 },
+      { key: "Ab", label: "ベース面積", unit: "m²", def: 0.0036 },
+    ],
+    R: p => {
+      const eta = finEfficiency(p.h, p.k, p.t, p.L);
+      const aFin = 2 * (p.L + p.t / 2) * p.W;
+      const aBase = Math.max(p.Ab - p.N * p.t * p.W, 0);
+      return 1 / (p.h * (aBase + p.N * eta * aFin));
+    },
+    note: p => `フィン効率 η = ${(100 * finEfficiency(p.h, p.k, p.t, p.L)).toFixed(1)} %`,
+  },
+  spreading: {
+    label: "拡がり抵抗", hint: "小さい熱源 → 広い板 (Lee et al.)", glyph: "spread",
+    fields: [
+      { key: "k", label: "板の k", unit: "W/(m·K)", def: 390 },
+      { key: "a", label: "熱源の等価半径", unit: "m", def: 0.0068 },
+      { key: "b", label: "板の等価半径", unit: "m", def: 0.0198 },
+      { key: "t", label: "板厚", unit: "m", def: 0.003 },
+      { key: "h", label: "裏面の等価 h", unit: "W/(m²·K)", def: 3000 },
+    ],
+    R: p => spreadingDisk(p.a, p.b, p.t, p.k, p.h),
+    note: p => `a/b = ${(p.a / p.b).toFixed(2)}、h は下流の合成抵抗と整合させること`,
+  },
+  flow: {
+    label: "流体への排熱", hint: "R = 1 / (2 ṁ cp)", glyph: "flow",
+    fields: [
+      { key: "fluid", label: "流体", type: "select", def: "空気",
+        options: Object.keys(FLUIDS).map(n => [n, n]) },
+      { key: "mdot", label: "質量流量 ṁ", unit: "kg/s", def: 0.00373, step: 0.001 },
+      { key: "mean", label: "代表点", type: "select", def: "mean",
+        options: [["mean", "平均温度 1/(2ṁcp)"], ["out", "出口温度 1/(ṁcp)"]] },
+    ],
+    R: p => 1 / ((p.mean === "mean" ? 2 : 1) * p.mdot * (FLUIDS[p.fluid] || FLUIDS["空気"]).cp),
+    note: p => `1 W あたり ${fmt(1 / (p.mdot * (FLUIDS[p.fluid] || FLUIDS["空気"]).cp))} K 昇温`,
+  },
+  resistance: {
+    label: "熱抵抗を直接指定", hint: "R [K/W] をそのまま入れる", glyph: "res",
+    fields: [{ key: "R", label: "熱抵抗 R", unit: "K/W", def: 0.5, step: 0.01 }],
+    R: p => p.R,
+    note: () => "実測値やデータシートの値を入れるとき",
+  },
+};
+function defaultsFor(type) {
+  const p = {};
+  for (const f of ELEMENTS[type].fields) {
+    if (f.type === "material") p.mat = "アルミ合金 (200)";
+    else p[f.key] = f.def;
+  }
+  return p;
+}
+function elementR(el, ta, tb) {
+  const def = ELEMENTS[el.type];
+  const r = def.R(el.p, ta, tb);
+  return (isFinite(r) && r > 0) ? r : NaN;
+}
+function isNonlinear(el) {
+  const def = ELEMENTS[el.type];
+  return def.nonlinear ? !!def.nonlinear(el.p) : false;
+}
+function fmt(v, d) {
+  if (!isFinite(v)) return "–";
+  const a = Math.abs(v);
+  if (v === 0) return "0";
+  if (a >= 1e4 || a < 1e-3) return v.toExponential(2);
+  return v.toFixed(d === undefined ? (a < 1 ? 4 : a < 100 ? 3 : 1) : d);
+}
+
+/* =====================================================================
+   3. ソルバ —— 節点法 (Python 版 network.py と同じ定式化)
+       C dT/dt = Q + Σ (Tj - Ti)/Rij
+   ===================================================================== */
+function gaussSolve(A, b) {
+  const n = b.length;
+  for (let i = 0; i < n; i++) {
+    let piv = i;
+    for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
+    if (Math.abs(A[piv][i]) < 1e-14) return null;
+    if (piv !== i) { const t = A[piv]; A[piv] = A[i]; A[i] = t; const s = b[piv]; b[piv] = b[i]; b[i] = s; }
+    const d = A[i][i];
+    for (let r = i + 1; r < n; r++) {
+      const f = A[r][i] / d;
+      if (f === 0) continue;
+      for (let c = i; c < n; c++) A[r][c] -= f * A[i][c];
+      b[r] -= f * b[i];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = b[i];
+    for (let c = i + 1; c < n; c++) s -= A[i][c] * x[c];
+    x[i] = s / A[i][i];
+  }
+  return x;
+}
+function assemble(model, T, idx) {
+  const n = model.nodes.length;
+  const A = Array.from({ length: n }, () => new Array(n).fill(0));
+  const b = new Array(n).fill(0);
+  for (const el of model.elems) {
+    const i = idx[el.a], j = idx[el.b];
+    if (i === undefined || j === undefined) continue;
+    const r = elementR(el, T[i], T[j]);
+    if (!isFinite(r)) continue;
+    const g = 1 / r;
+    A[i][i] += g; A[j][j] += g; A[i][j] -= g; A[j][i] -= g;
+  }
+  model.nodes.forEach((nd, i) => { b[i] += (nd.heat || 0); });
+  return { A, b };
+}
+function applyFixed(model, A, b) {
+  model.nodes.forEach((nd, i) => {
+    if (nd.fixed === null || nd.fixed === undefined) return;
+    A[i].fill(0); A[i][i] = 1; b[i] = nd.fixed;
+  });
+}
+function solveSteady(model, guess) {
+  const n = model.nodes.length;
+  if (!n) return null;
+  const idx = {}; model.nodes.forEach((nd, i) => { idx[nd.id] = i; });
+  const nonlinear = model.elems.some(isNonlinear);
+  let T = model.nodes.map(nd => (nd.fixed !== null && nd.fixed !== undefined) ? nd.fixed : guess);
+  let iterations = 0, residual = 0;
+  for (let it = 1; it <= 200; it++) {
+    iterations = it;
+    const { A, b } = assemble(model, T, idx);
+    applyFixed(model, A, b);
+    const Tn = gaussSolve(A, b);
+    if (!Tn) return null;
+    residual = 0;
+    for (let i = 0; i < n; i++) residual = Math.max(residual, Math.abs(Tn[i] - T[i]));
+    if (!nonlinear) { T = Tn; residual = 0; break; }
+    for (let i = 0; i < n; i++) T[i] = T[i] + 0.7 * (Tn[i] - T[i]);
+    if (residual < 1e-9) break;
+  }
+  return { T, idx, iterations, residual, nonlinear };
+}
+function solveTransient(model, opts) {
+  const n = model.nodes.length;
+  const idx = {}; model.nodes.forEach((nd, i) => { idx[nd.id] = i; });
+  const caps = model.nodes.map(nd => Math.max(nd.cap || 0, 0));
+  const nonlinear = model.elems.some(isNonlinear);
+  const steps = Math.max(1, Math.min(Math.round(opts.tEnd / opts.dt), 20000));
+  const store = Math.max(1, Math.floor(steps / 300));
+  let T = model.nodes.map(nd => (nd.fixed !== null && nd.fixed !== undefined) ? nd.fixed : opts.initial);
+  const times = [0], frames = [T.slice()];
+  for (let s = 1; s <= steps; s++) {
+    let Tn = T.slice();
+    for (let pass = 0; pass < (nonlinear ? 3 : 1); pass++) {
+      const { A, b } = assemble(model, Tn, idx);
+      const lhs = A.map((row, i) => { const r = row.slice(); r[i] += caps[i] / opts.dt; return r; });
+      const rhs = b.map((v, i) => v + caps[i] / opts.dt * T[i]);
+      // 熱容量ゼロのノードは代数拘束のまま (後退オイラーなのでそのままでよい)
+      applyFixed(model, lhs, rhs);
+      const sol = gaussSolve(lhs, rhs);
+      if (!sol) return null;
+      Tn = sol;
+    }
+    T = Tn;
+    if (s % store === 0 || s === steps) { times.push(s * opts.dt); frames.push(T.slice()); }
+  }
+  return { times, frames, idx };
+}
+</script>
+
+<style>
+@keyframes flowdash { to { stroke-dashoffset: -22; } }
+.edge-flow.animated { animation: flowdash 1s linear infinite; }
+.edge-flow.animated.rev { animation-direction: reverse; }
+</style>
+<script>
+"use strict";
+/* =====================================================================
+   4. 状態
+   ===================================================================== */
+const NODE_W = 140, NODE_H = 56, STORE_KEY = "thermal-studio-v1";
+let state = { nodes: [], elems: [], seq: 1 };
+let sel = null;                       // {kind:'node'|'elem', id}
+let tool = "select", mode = "steady";
+let pendingConnect = null;            // つなぐモードで選んだ 1 個目
+let view = { x: 0, y: 0, w: 900, h: 560 };
+let last = null;                      // 直近の解
+let tr = null, frame = 0, playing = false, rafId = 0;
+
+const $ = s => document.querySelector(s);
+const canvas = $("#canvas");
+const uid = p => p + (state.seq++);
+
+/* ------------------------------------------------ プリセット */
+const PRESETS = {
+  cpu: {
+    name: "空冷 CPU クーラー",
+    desc: "拡がり抵抗・フィン・空気の昇温",
+    build: () => ({
+      nodes: [
+        { id: "n1", name: "ダイ", x: 250, y: 110, heat: 95, fixed: null, cap: 0.16 },
+        { id: "n2", name: "ダイ裏面", x: 250, y: 275, heat: 0, fixed: null, cap: 0 },
+        { id: "n3", name: "IHS 上面", x: 250, y: 440, heat: 0, fixed: null, cap: 12.6 },
+        { id: "n4", name: "IHS 下面", x: 250, y: 605, heat: 0, fixed: null, cap: 0 },
+        { id: "n5", name: "シンク ベース", x: 680, y: 605, heat: 0, fixed: null, cap: 104 },
+        { id: "n6", name: "フィン根元", x: 680, y: 440, heat: 0, fixed: null, cap: 0 },
+        { id: "n7", name: "空気(平均)", x: 680, y: 275, heat: 0, fixed: null, cap: 0 },
+        { id: "n8", name: "吸気", x: 680, y: 110, heat: 0, fixed: 30, cap: 0 },
+      ],
+      elems: [
+        { id: "e1", type: "conduction", a: "n1", b: "n2", p: { mat: "シリコン (120)", k: 120, L: 0.0007, A: 1.44e-4 } },
+        { id: "e2", type: "interface", a: "n2", b: "n3", p: { rho: 6e-6, A: 1.44e-4 } },
+        { id: "e3", type: "spreading", a: "n3", b: "n4", p: { k: 390, a: 0.0068, b: 0.0198, t: 0.003, h: 3000 } },
+        { id: "e4", type: "interface", a: "n4", b: "n5", p: { rho: 2e-5, A: 1.225e-3 } },
+        { id: "e5", type: "spreading", a: "n5", b: "n6", p: { k: 200, a: 0.0198, b: 0.0339, t: 0.006, h: 800 } },
+        { id: "e6", type: "fin_array", a: "n6", b: "n7", p: { h: 39, k: 200, t: 0.0012, L: 0.04, W: 0.06, N: 22, Ab: 0.0036 } },
+        { id: "e7", type: "flow", a: "n7", b: "n8", p: { fluid: "空気", mdot: 0.00373, mean: "mean" } },
+      ],
+    }),
+  },
+  wall: {
+    name: "多層外壁 + 熱橋",
+    desc: "並列枝の効き方を見る",
+    build: () => ({
+      nodes: [
+        { id: "n1", name: "室内", x: 110, y: 240, heat: 0, fixed: 20, cap: 0 },
+        { id: "n2", name: "内表面", x: 300, y: 240, heat: 0, fixed: null, cap: 0 },
+        { id: "n3", name: "断熱層 外側", x: 540, y: 240, heat: 0, fixed: null, cap: 0 },
+        { id: "n4", name: "外表面", x: 740, y: 240, heat: 0, fixed: null, cap: 0 },
+        { id: "n5", name: "外気", x: 930, y: 240, heat: 0, fixed: -5, cap: 0 },
+      ],
+      elems: [
+        { id: "e1", type: "convection", a: "n1", b: "n2", p: { mode: "fixed", h: 9, A: 10 } },
+        { id: "e2", type: "conduction", a: "n2", b: "n3", p: { mat: "グラスウール (0.04)", k: 0.04, L: 0.1, A: 8.5 } },
+        { id: "e3", type: "conduction", a: "n2", b: "n3", p: { mat: "木材 / 柱 (0.13)", k: 0.13, L: 0.1, A: 1.5 } },
+        { id: "e4", type: "conduction", a: "n3", b: "n4", p: { mat: "合板 (0.15)", k: 0.15, L: 0.012, A: 10 } },
+        { id: "e5", type: "convection", a: "n4", b: "n5", p: { mode: "fixed", h: 23, A: 10 } },
+      ],
+    }),
+  },
+  enclosure: {
+    name: "ファンレス筐体",
+    desc: "自然対流 + 輻射(非線形)",
+    build: () => ({
+      nodes: [
+        { id: "n1", name: "発熱部品", x: 300, y: 130, heat: 20, fixed: null, cap: 135 },
+        { id: "n2", name: "筐体", x: 300, y: 320, heat: 0, fixed: null, cap: 720 },
+        { id: "n3", name: "室内空気", x: 300, y: 540, heat: 0, fixed: 25, cap: 0 },
+      ],
+      elems: [
+        { id: "e1", type: "resistance", a: "n1", b: "n2", p: { R: 0.8 } },
+        { id: "e2", type: "convection", a: "n2", b: "n3", p: { mode: "nat_v", H: 0.05, A: 0.035 } },
+        { id: "e3", type: "convection", a: "n2", b: "n3", p: { mode: "nat_h", Lc: 0.043, A: 0.03 } },
+        { id: "e4", type: "radiation", a: "n2", b: "n3", p: { eps: 0.85, F: 1, A: 0.065 } },
+      ],
+    }),
+  },
+  power: {
+    name: "パワーモジュール水冷",
+    desc: "拡がり抵抗が支配的な例",
+    build: () => ({
+      nodes: [
+        { id: "n1", name: "SiC チップ", x: 250, y: 120, heat: 300, fixed: null, cap: 0.33 },
+        { id: "n2", name: "絶縁基板", x: 250, y: 300, heat: 0, fixed: null, cap: 5 },
+        { id: "n3", name: "銅ベース", x: 250, y: 480, heat: 0, fixed: null, cap: 120 },
+        { id: "n4", name: "ベース下面", x: 680, y: 480, heat: 0, fixed: null, cap: 0 },
+        { id: "n5", name: "冷却板", x: 680, y: 300, heat: 0, fixed: null, cap: 462 },
+        { id: "n6", name: "冷却水(平均)", x: 680, y: 120, heat: 0, fixed: null, cap: 0 },
+        { id: "n7", name: "冷却水 入口", x: 1110, y: 120, heat: 0, fixed: 45, cap: 0 },
+      ],
+      elems: [
+        { id: "e1", type: "conduction", a: "n1", b: "n2", p: { mat: "はんだ (58)", k: 58, L: 1e-4, A: 1e-3 } },
+        { id: "e2", type: "spreading", a: "n2", b: "n3", p: { k: 170, a: 0.0178, b: 0.0357, t: 6.4e-4, h: 9800 } },
+        { id: "e3", type: "spreading", a: "n3", b: "n4", p: { k: 390, a: 0.0357, b: 0.0618, t: 0.003, h: 7000 } },
+        { id: "e4", type: "interface", a: "n4", b: "n5", p: { rho: 3e-5, A: 0.012 } },
+        { id: "e5", type: "convection", a: "n5", b: "n6", p: { mode: "fixed", h: 6000, A: 0.024 } },
+        { id: "e6", type: "flow", a: "n6", b: "n7", p: { fluid: "水", mdot: 0.0665, mean: "mean" } },
+      ],
+    }),
+  },
+};
+
+/* =====================================================================
+   5. 計算と評価
+   ===================================================================== */
+function analyse() {
+  const msgs = [];
+  if (!state.nodes.length) return { msgs: [{ t: "warn", s: "ノードがありません。左の例題を読み込むか、N キーで追加してください。" }] };
+  const fixed = state.nodes.filter(n => n.fixed !== null && n.fixed !== undefined);
+  if (!fixed.length) msgs.push({ t: "err", s: "温度を固定したノードがありません。外気や冷却水などの境界を 1 つ作ってください。" });
+
+  // 浮きノードの検出
+  const adj = {}; state.nodes.forEach(n => { adj[n.id] = []; });
+  state.elems.forEach(e => { if (adj[e.a] && adj[e.b]) { adj[e.a].push(e.b); adj[e.b].push(e.a); } });
+  if (fixed.length) {
+    const seen = new Set(fixed.map(n => n.id)), stack = [...seen];
+    while (stack.length) { const c = stack.pop(); for (const nb of adj[c]) if (!seen.has(nb)) { seen.add(nb); stack.push(nb); } }
+    const floating = state.nodes.filter(n => !seen.has(n.id));
+    if (floating.length) msgs.push({ t: "err", s: "境界につながっていないノードがあります: " + floating.map(n => n.name).join("、") });
+  }
+  if (msgs.some(m => m.t === "err")) return { msgs };
+
+  const guess = fixed.length ? fixed[0].fixed + 20 : 25;
+  const res = solveSteady(state, guess);
+  if (!res) return { msgs: [{ t: "err", s: "解けませんでした。抵抗が 0 や負になっていないか確認してください。" }] };
+
+  const T = {}; state.nodes.forEach((n, i) => { T[n.id] = res.T[i]; });
+  const rows = state.elems.map(e => {
+    const ta = T[e.a], tb = T[e.b], R = elementR(e, ta, tb);
+    return { e, R, dT: ta - tb, Q: (ta - tb) / R };
+  }).filter(r => isFinite(r.R));
+  if (rows.length !== state.elems.length) msgs.push({ t: "warn", s: "一部の要素で熱抵抗が計算できません(入力値を確認してください)。" });
+
+  const totalHeat = state.nodes.reduce((s, n) => s + (n.heat || 0), 0);
+  const sinks = fixed.map(n => n.id);
+  const sources = state.nodes.filter(n => (n.heat || 0) > 0);
+  const candidates = state.nodes.filter(n => n.fixed === null || n.fixed === undefined);
+  const target = (candidates.length ? candidates : state.nodes)
+    .reduce((a, b) => (T[a.id] >= T[b.id] ? a : b));
+
+  // 主熱流経路: 熱流が最大の枝をたどる
+  const start = sources.length ? sources.reduce((a, b) => (T[a.id] >= T[b.id] ? a : b))
+                               : fixed.reduce((a, b) => (a.fixed >= b.fixed ? a : b));
+  const path = [start.id], pathElems = [], visited = new Set([start.id]);
+  let cur = start.id;
+  for (let step = 0; step < state.nodes.length + 1; step++) {
+    if (sinks.includes(cur) && step > 0) break;
+    let best = null, bestQ = 1e-12;
+    for (const r of rows) {
+      const other = r.e.a === cur ? r.e.b : (r.e.b === cur ? r.e.a : null);
+      if (!other || visited.has(other)) continue;
+      const q = (T[cur] - T[other]) / r.R;
+      if (q > bestQ) { best = { r, other }; bestQ = q; }
+    }
+    if (!best) break;
+    path.push(best.other); pathElems.push(best.r.e.id); visited.add(best.other); cur = best.other;
+  }
+  const onPath = new Set(pathElems);
+
+  // エネルギー収支
+  let boundary = 0;
+  for (const id of sinks) for (const r of rows) {
+    if (r.e.a === id) boundary -= r.Q; else if (r.e.b === id) boundary += r.Q;
+  }
+  // 発熱があればそれが基準。無ければ(温度差で駆動される壁など)低温側境界を通る熱量。
+  let tSink = fixed.length ? fixed[0].fixed : 0, refHeat = totalHeat, rTotal = NaN;
+  if (totalHeat > 1e-12) {
+    rTotal = (T[target.id] - tSink) / totalHeat;
+  } else if (fixed.length >= 2) {
+    const hot = fixed.reduce((a, b) => (a.fixed >= b.fixed ? a : b));
+    const cold = fixed.reduce((a, b) => (a.fixed <= b.fixed ? a : b));
+    let through = 0;
+    for (const r of rows) { if (r.e.a === cold.id) through -= r.Q; else if (r.e.b === cold.id) through += r.Q; }
+    refHeat = Math.abs(through); tSink = cold.fixed;
+    if (refHeat > 1e-12) rTotal = (hot.fixed - cold.fixed) / refHeat;
+  }
+
+  const temps = state.nodes.map(n => T[n.id]);
+  return {
+    msgs, T, rows, res, target, totalHeat, refHeat, rTotal, boundary, onPath, path,
+    tMin: Math.min(...temps), tMax: Math.max(...temps),
+    rPath: rows.filter(r => onPath.has(r.e.id)).reduce((s, r) => s + r.R, 0),
+  };
+}
+
+/* =====================================================================
+   6. 描画
+   ===================================================================== */
+function svgEl(tag, attrs, text) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) el.setAttribute(k, attrs[k]);
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function hexToRgb(h) {
+  const m = h.replace("#", "");
+  const v = m.length === 3 ? m.split("").map(c => c + c).join("") : m;
+  return [parseInt(v.slice(0, 2), 16), parseInt(v.slice(2, 4), 16), parseInt(v.slice(4, 6), 16)];
+}
+function mix(a, b, f) { return a.map((v, i) => Math.round(v + (b[i] - v) * f)); }
+function tempColor(t, lo, hi) {
+  const cold = hexToRgb(cssVar("--t-cold")), mid = hexToRgb(cssVar("--t-mid")), hot = hexToRgb(cssVar("--t-hot"));
+  const u = hi - lo < 1e-9 ? 0.5 : Math.min(Math.max((t - lo) / (hi - lo), 0), 1);
+  const c = u < 0.5 ? mix(cold, mid, u * 2) : mix(mid, hot, (u - 0.5) * 2);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function currentTemps(a) {
+  if (mode === "transient" && tr && tr.frames[frame]) {
+    const T = {}; state.nodes.forEach((n, i) => { T[n.id] = tr.frames[frame][i]; });
+    return T;
+  }
+  return a.T;
+}
+function render() {
+  const a = analyse();
+  last = a;
+  canvas.setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`);
+  canvas.className.baseVal = "mode-" + tool;
+  while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
+  const gEdges = svgEl("g"), gNodes = svgEl("g");
+  canvas.appendChild(gEdges); canvas.appendChild(gNodes);
+
+  const T = a.T ? currentTemps(a) : null;
+  let lo = a.tMin, hi = a.tMax;
+  if (T) { const vals = Object.values(T); lo = Math.min(...vals); hi = Math.max(...vals); }
+  $("#leg-min").textContent = T ? lo.toFixed(1) : "–";
+  $("#leg-max").textContent = T ? hi.toFixed(1) : "–";
+
+  const pos = {}; state.nodes.forEach(n => { pos[n.id] = n; });
+  const maxQ = a.rows ? Math.max(...a.rows.map(r => Math.abs(r.Q)), 1e-9) : 1;
+
+  // ---- 枝 (同じ 2 ノード間の並列枝は少しずらす)
+  const pairCount = {}, pairSeen = {};
+  state.elems.forEach(e => { const k = [e.a, e.b].sort().join("|"); pairCount[k] = (pairCount[k] || 0) + 1; });
+  state.elems.forEach(e => {
+    const na = pos[e.a], nb = pos[e.b];
+    if (!na || !nb) return;
+    const k = [e.a, e.b].sort().join("|");
+    pairSeen[k] = (pairSeen[k] || 0) + 1;
+    const off = (pairSeen[k] - 1 - (pairCount[k] - 1) / 2) * 26;
+    const dx = nb.x - na.x, dy = nb.y - na.y, len = Math.hypot(dx, dy) || 1;
+    const ox = -dy / len * off, oy = dx / len * off;
+    const x1 = na.x + ox, y1 = na.y + oy, x2 = nb.x + ox, y2 = nb.y + oy;
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const row = a.rows && a.rows.find(r => r.e.id === e.id);
+    const q = row ? row.Q : 0;
+    const w = row ? 1.5 + 7 * Math.sqrt(Math.abs(q) / maxQ) : 2;
+    const g = svgEl("g");
+    g.appendChild(svgEl("line", { x1, y1, x2, y2, class: "edge-line", "stroke-width": w, opacity: row ? 0.35 : 0.6 }));
+    if (row && Math.abs(q) > 1e-9) {
+      const dash = svgEl("line", { x1, y1, x2, y2, "stroke-width": w,
+        class: "edge-flow animated" + (q < 0 ? " rev" : "") + (sel && sel.kind === "elem" && sel.id === e.id ? " selected" : ""),
+        "stroke-dasharray": "7 15" });
+      dash.style.animationDuration = Math.max(0.35, 2.4 - 2.0 * Math.sqrt(Math.abs(q) / maxQ)) + "s";
+      g.appendChild(dash);
+    }
+    const label = `${ELEMENTS[e.type].label}  ${row ? fmt(row.R) + " K/W" : "–"}` +
+                  (row ? `  ${fmt(Math.abs(row.Q), 1)} W` : "");
+    const labelDy = (pairSeen[k] - 1 - (pairCount[k] - 1) / 2) * 15;
+    g.appendChild(svgEl("text", { x: mx, y: my - 8 + labelDy, class: "edge-label",
+      "text-anchor": "middle" }, label));
+    const hit = svgEl("line", { x1, y1, x2, y2, class: "edge-hit" });
+    hit.addEventListener("pointerdown", ev => { ev.stopPropagation(); select("elem", e.id); });
+    g.appendChild(hit);
+    gEdges.appendChild(g);
+  });
+
+  // ---- ノード
+  state.nodes.forEach(n => {
+    const t = T ? T[n.id] : null;
+    const col = t === null ? cssVar("--muted") : tempColor(t, lo, hi);
+    const x = n.x - NODE_W / 2, y = n.y - NODE_H / 2;
+    const g = svgEl("g");
+    const selected = sel && sel.kind === "node" && sel.id === n.id;
+    g.appendChild(svgEl("rect", { x, y, width: NODE_W, height: NODE_H, rx: 6,
+      class: "node-box" + (selected ? " selected" : ""), stroke: selected ? cssVar("--accent") : col,
+      fill: "var(--raised)" }));
+    g.appendChild(svgEl("rect", { x: x + 1.5, y: y + 1.5, width: NODE_W - 3, height: 5, rx: 2, fill: col }));
+    g.appendChild(svgEl("text", { x: n.x, y: y + 24, class: "node-name", "text-anchor": "middle" }, n.name));
+    g.appendChild(svgEl("text", { x: n.x, y: y + 44, class: "node-temp", "text-anchor": "middle" },
+      t === null ? "–" : t.toFixed(1) + " °C"));
+    if (n.fixed !== null && n.fixed !== undefined) {
+      for (let i = 0; i < 3; i++)
+        g.appendChild(svgEl("line", { x1: n.x - 14 + i * 5, y1: y + NODE_H + 4 + i * 4,
+          x2: n.x + 14 - i * 5, y2: y + NODE_H + 4 + i * 4, class: "ground-bar" }));
+    }
+    if (n.heat) g.appendChild(svgEl("text", { x: x + NODE_W, y: y - 7,
+      class: "node-badge", "text-anchor": "end" }, "Q = " + fmt(n.heat, 1) + " W"));
+    if (n.cap) g.appendChild(svgEl("text", { x: x, y: y - 7, class: "node-badge" },
+      "C = " + fmt(n.cap, 1) + " J/K"));
+    const hit = svgEl("rect", { x, y, width: NODE_W, height: NODE_H, rx: 6, class: "node-hit" });
+    hit.addEventListener("pointerdown", ev => onNodePointerDown(ev, n));
+    g.appendChild(hit);
+    gNodes.appendChild(g);
+  });
+
+  if (pendingConnect) {
+    const n = pos[pendingConnect];
+    if (n) gEdges.appendChild(svgEl("circle", { cx: n.x, cy: n.y, r: NODE_W / 1.6, class: "edge-pending" }));
+  }
+  renderPanels(a);
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   7. パネル (プロパティ・結果・時間応答)
+   ===================================================================== */
+function field(label, unit, input) {
+  const d = document.createElement("div");
+  d.className = "field";
+  const l = document.createElement("label"); l.textContent = label;
+  d.appendChild(l); d.appendChild(input);
+  if (unit) { const u = document.createElement("span"); u.className = "unit"; u.textContent = unit; d.appendChild(u); }
+  else { d.style.gridTemplateColumns = "1fr 108px"; }
+  return d;
+}
+function numInput(value, step, onChange) {
+  const i = document.createElement("input");
+  i.type = "number"; i.value = value; if (step) i.step = step;
+  i.addEventListener("input", () => { const v = parseFloat(i.value); if (isFinite(v)) onChange(v); });
+  return i;
+}
+function selectInput(options, value, onChange) {
+  const s = document.createElement("select");
+  options.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; s.appendChild(o); });
+  s.value = value;
+  s.addEventListener("change", () => onChange(s.value));
+  return s;
+}
+function renderPanels(a) {
+  renderProperties(a);
+  renderResults(a);
+  renderTimeline(a);
+}
+function renderProperties(a) {
+  const body = $("#prop-body"), title = $("#prop-title");
+  body.innerHTML = "";
+  if (!sel) {
+    title.textContent = "プロパティ";
+    body.innerHTML = '<p class="empty">ノードか要素を選ぶと、ここで編集できます。</p>';
+    return;
+  }
+  const form = document.createElement("div"); form.className = "form";
+  if (sel.kind === "node") {
+    const n = state.nodes.find(x => x.id === sel.id);
+    if (!n) { sel = null; return renderProperties(a); }
+    title.textContent = "ノード: " + n.name;
+    const name = document.createElement("input");
+    name.type = "text"; name.value = n.name;
+    name.addEventListener("input", () => { n.name = name.value; touch(); });
+    form.appendChild(field("名前", "", name));
+    form.appendChild(field("発熱", "W", numInput(n.heat || 0, "1", v => { n.heat = v; touch(); })));
+    form.appendChild(field("熱容量", "J/K", numInput(n.cap || 0, "1", v => { n.cap = v; touch(); })));
+
+    const wrap = document.createElement("label"); wrap.className = "check";
+    const cb = document.createElement("input"); cb.type = "checkbox";
+    cb.checked = n.fixed !== null && n.fixed !== undefined;
+    cb.addEventListener("change", () => { n.fixed = cb.checked ? 25 : null; touch(); });
+    wrap.appendChild(cb); wrap.appendChild(document.createTextNode("温度を固定する(境界にする)"));
+    form.appendChild(wrap);
+    if (n.fixed !== null && n.fixed !== undefined)
+      form.appendChild(field("固定温度", "degC", numInput(n.fixed, "1", v => { n.fixed = v; touch(); })));
+    body.appendChild(form);
+    if (a.T) {
+      const r = document.createElement("div"); r.className = "readout";
+      const inflow = (a.rows || []).reduce((s, row) =>
+        s + (row.e.b === n.id ? row.Q : row.e.a === n.id ? -row.Q : 0), 0);
+      r.innerHTML = `<b>${a.T[n.id].toFixed(2)} degC</b>` +
+        `<span class="r-sub">流れ込む熱 ${fmt(inflow, 2)} W / 出ていく熱 ${fmt(-inflow + (n.heat || 0), 2)} W</span>`;
+      body.appendChild(r);
+    }
+  } else {
+    const e = state.elems.find(x => x.id === sel.id);
+    if (!e) { sel = null; return renderProperties(a); }
+    const def = ELEMENTS[e.type];
+    title.textContent = "要素: " + def.label;
+    form.appendChild(field("種類", "", selectInput(
+      Object.entries(ELEMENTS).map(([k, v]) => [k, v.label]), e.type,
+      v => { e.type = v; e.p = defaultsFor(v); touch(); })));
+    const nodeOpts = state.nodes.map(n => [n.id, n.name]);
+    form.appendChild(field("つなぐ先 A", "", selectInput(nodeOpts, e.a, v => { e.a = v; touch(); })));
+    form.appendChild(field("つなぐ先 B", "", selectInput(nodeOpts, e.b, v => { e.b = v; touch(); })));
+    for (const f of def.fields) {
+      if (f.when && !f.when(e.p)) continue;
+      if (f.type === "material") {
+        form.appendChild(field(f.label, "", selectInput(
+          MAT_NAMES.map(m => [m, m]), e.p.mat || MAT_NAMES[0],
+          v => { e.p.mat = v; e.p.k = MATERIALS[v].k; touch(); })));
+      } else if (f.type === "select") {
+        form.appendChild(field(f.label, "", selectInput(f.options, e.p[f.key] ?? f.def,
+          v => { e.p[f.key] = v; touch(); })));
+      } else {
+        form.appendChild(field(f.label, f.unit, numInput(e.p[f.key] ?? f.def,
+          f.step || "any", v => { e.p[f.key] = v; touch(); })));
+      }
+    }
+    body.appendChild(form);
+    const row = (a.rows || []).find(r => r.e.id === e.id);
+    const ta = a.T ? a.T[e.a] : 25, tb = a.T ? a.T[e.b] : 25;
+    const r = document.createElement("div"); r.className = "readout";
+    r.innerHTML = `<b>R = ${row ? fmt(row.R) : "–"} K/W</b>` +
+      (row ? `　Q = ${fmt(row.Q, 2)} W　ΔT = ${fmt(row.dT, 2)} K` : "") +
+      `<span class="r-sub">${def.hint}${def.note ? " ／ " + def.note(e.p, ta, tb) : ""}</span>`;
+    body.appendChild(r);
+  }
+}
+function renderResults(a) {
+  const msgs = $("#messages"); msgs.innerHTML = "";
+  (a.msgs || []).forEach(m => {
+    const d = document.createElement("div");
+    d.className = "msg" + (m.t === "warn" ? " warn" : ""); d.textContent = m.s;
+    msgs.appendChild(d);
+  });
+  const stats = $("#stats"), results = $("#results");
+  stats.innerHTML = ""; results.innerHTML = "";
+  if (!a.T) return;
+
+  const limit = parseFloat($("#limit").value);
+  const T = currentTemps(a);
+  const tTarget = T[a.target.id];
+  const margin = limit - tTarget;
+  const cls = !isFinite(margin) ? "" : margin >= 10 ? "is-good" : margin >= 0 ? "is-warning" : "is-critical";
+  const tiles = [
+    ["最高温度 (" + a.target.name + ")", tTarget.toFixed(1), "degC", cls],
+    ["上限までの余裕", (margin >= 0 ? "+" : "") + margin.toFixed(1), "K", cls],
+    ["合成熱抵抗", fmt(a.rTotal), "K/W", ""],
+    [a.totalHeat > 0 ? "投入熱量" : "通過熱量", fmt(a.refHeat, 1), "W", ""],
+  ];
+  tiles.forEach(([l, v, u, c]) => {
+    const d = document.createElement("div"); d.className = "stat " + c;
+    d.innerHTML = `<div class="s-label">${l}</div><div class="s-value">${v}<small>${u}</small></div>`;
+    stats.appendChild(d);
+  });
+
+  const h1 = document.createElement("h2"); h1.textContent = "熱抵抗の内訳"; results.appendChild(h1);
+  const maxR = Math.max(...a.rows.map(r => r.R), 1e-12);
+  const t1 = document.createElement("table"); t1.className = "grid";
+  t1.innerHTML = "<thead><tr><th>要素</th><th style='text-align:right'>R [K/W]</th>" +
+                 "<th style='text-align:right'>ΔT [K]</th><th style='text-align:right'>Q [W]</th></tr></thead>";
+  const tb1 = document.createElement("tbody");
+  a.rows.slice().sort((x, y) => y.R - x.R).forEach(r => {
+    const tr2 = document.createElement("tr");
+    tr2.className = "clickable" + (a.onPath.has(r.e.id) ? " on-path" : "");
+    tr2.innerHTML = `<td>${ELEMENTS[r.e.type].label}` +
+      `<span class="rbar${a.onPath.has(r.e.id) ? "" : " off"}" style="width:${Math.max(2, 100 * r.R / maxR)}%"></span></td>` +
+      `<td class="n">${fmt(r.R)}</td><td class="n">${r.dT.toFixed(2)}</td><td class="n">${r.Q.toFixed(2)}</td>`;
+    tr2.addEventListener("click", () => select("elem", r.e.id));
+    tb1.appendChild(tr2);
+  });
+  t1.appendChild(tb1); results.appendChild(t1);
+
+  const h2 = document.createElement("h2"); h2.textContent = "ノード温度"; results.appendChild(h2);
+  const t2 = document.createElement("table"); t2.className = "grid";
+  t2.innerHTML = "<thead><tr><th>ノード</th><th style='text-align:right'>T [degC]</th>" +
+                 "<th style='text-align:right'>Q [W]</th></tr></thead>";
+  const tb2 = document.createElement("tbody");
+  state.nodes.slice().sort((x, y) => T[y.id] - T[x.id]).forEach(n => {
+    const tr2 = document.createElement("tr"); tr2.className = "clickable";
+    tr2.innerHTML = `<td>${n.name}${n.fixed !== null && n.fixed !== undefined ? " (固定)" : ""}</td>` +
+      `<td class="n">${T[n.id].toFixed(2)}</td><td class="n">${n.heat ? fmt(n.heat, 1) : "–"}</td>`;
+    tr2.addEventListener("click", () => select("node", n.id));
+    tb2.appendChild(tr2);
+  });
+  t2.appendChild(tb2); results.appendChild(t2);
+
+  const h3 = document.createElement("h2"); h3.textContent = "検算"; results.appendChild(h3);
+  const chk = document.createElement("table"); chk.className = "grid";
+  const resid = Math.abs(a.totalHeat - a.boundary);
+  chk.innerHTML = "<tbody>" +
+    `<tr><td>エネルギー収支</td><td class="n">${fmt(a.totalHeat, 2)} → ${fmt(a.boundary, 2)} W</td></tr>` +
+    `<tr><td>残差</td><td class="n">${resid.toExponential(1)} W</td></tr>` +
+    `<tr><td>${a.res.nonlinear ? "非線形反復" : "線形(直接解)"}</td><td class="n">${a.res.iterations} 回</td></tr>` +
+    `<tr><td>主熱流経路の合計</td><td class="n">${fmt(a.rPath)} K/W</td></tr>` +
+    "</tbody>";
+  results.appendChild(chk);
+}
+function renderTimeline(a) {
+  const box = $("#timeline");
+  $("#transient-panel").hidden = mode !== "transient";
+  $("#playbar").hidden = mode !== "transient";
+  if (mode !== "transient" || !tr) { box.innerHTML = ""; return; }
+  const watch = pickWatch(a);
+  const W = 280, H = 130, L = 34, R = 8, Tp = 8, B = 20;
+  let lo = Infinity, hi = -Infinity;
+  watch.forEach(n => tr.frames.forEach(f => {
+    const v = f[tr.idx[n.id]]; if (v < lo) lo = v; if (v > hi) hi = v;
+  }));
+  const span = (hi - lo) || 1; lo -= span * 0.08; hi += span * 0.08;
+  const t1 = tr.times[tr.times.length - 1] || 1;
+  const X = t => L + (W - L - R) * t / t1;
+  const Y = v => Tp + (H - Tp - B) * (hi - v) / (hi - lo);
+  const colors = [cssVar("--t-hot"), cssVar("--accent"), cssVar("--good")];
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="時間応答">`;
+  [lo, (lo + hi) / 2, hi].forEach(v => {
+    s += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}" class="tl-grid"/>`;
+    s += `<text x="${L - 5}" y="${(Y(v) + 3).toFixed(1)}" class="tl-tick" text-anchor="end">${v.toFixed(0)}</text>`;
+  });
+  watch.forEach((n, i) => {
+    const pts = tr.times.map((t, k) => `${X(t).toFixed(1)},${Y(tr.frames[k][tr.idx[n.id]]).toFixed(1)}`).join(" ");
+    s += `<polyline points="${pts}" class="tl-line" stroke="${colors[i % 3]}"/>`;
+  });
+  const cx = X(tr.times[frame] || 0);
+  s += `<line x1="${cx.toFixed(1)}" y1="${Tp}" x2="${cx.toFixed(1)}" y2="${H - B}" stroke="${cssVar("--muted")}" stroke-width="1"/>`;
+  s += `<text x="${L}" y="${H - 6}" class="tl-tick">0 s</text>`;
+  s += `<text x="${W - R}" y="${H - 6}" class="tl-tick" text-anchor="end">${t1.toFixed(0)} s</text>`;
+  s += "</svg>";
+  s += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;font-size:11px">' +
+    watch.map((n, i) => `<span style="color:${colors[i % 3]}">■</span>&nbsp;${n.name}`).join("") + "</div>";
+  box.innerHTML = s;
+}
+function pickWatch(a) {
+  const out = [];
+  if (a.target) out.push(a.target);
+  state.nodes.slice().sort((x, y) => (y.cap || 0) - (x.cap || 0)).forEach(n => {
+    if (out.length < 3 && !out.includes(n) && (n.cap || 0) > 0) out.push(n);
+  });
+  state.nodes.forEach(n => {
+    if (out.length < 3 && !out.includes(n) && (n.fixed === null || n.fixed === undefined)) out.push(n);
+  });
+  return out.slice(0, 3);
+}
+
+/* =====================================================================
+   8. 操作
+   ===================================================================== */
+function touch() { save(); if (mode === "transient") runTransient(); render(); }
+function select(kind, id) { sel = { kind, id }; pendingConnect = null; setHint(""); render(); }
+function setHint(text) { const h = $("#hint"); h.textContent = text; h.hidden = !text; }
+function setTool(t) {
+  tool = t; pendingConnect = null;
+  ["select", "add", "connect"].forEach(k => $("#tool-" + k).setAttribute("aria-pressed", String(k === t)));
+  setHint(t === "add" ? "空いている場所をクリックするとノードを作ります"
+        : t === "connect" ? `つなぐ元のノードをクリック(要素: ${ELEMENTS[connectType].label})` : "");
+  render();
+}
+let connectType = "conduction";
+function addNode(x, y) {
+  const n = { id: uid("n"), name: "ノード " + state.nodes.length, x, y, heat: 0, fixed: null, cap: 0 };
+  state.nodes.push(n); sel = { kind: "node", id: n.id }; touch();
+}
+function addElem(a, b, type) {
+  const e = { id: uid("e"), type, a, b, p: defaultsFor(type) };
+  state.elems.push(e); sel = { kind: "elem", id: e.id }; touch();
+}
+function deleteSelected() {
+  if (!sel) return;
+  if (sel.kind === "node") {
+    state.nodes = state.nodes.filter(n => n.id !== sel.id);
+    state.elems = state.elems.filter(e => e.a !== sel.id && e.b !== sel.id);
+  } else state.elems = state.elems.filter(e => e.id !== sel.id);
+  sel = null; touch();
+}
+let drag = null, pan = null;
+function toWorld(ev) {
+  const r = canvas.getBoundingClientRect();
+  return { x: view.x + (ev.clientX - r.left) / r.width * view.w,
+           y: view.y + (ev.clientY - r.top) / r.height * view.h };
+}
+function onNodePointerDown(ev, n) {
+  ev.stopPropagation();
+  if (tool === "connect") {
+    if (!pendingConnect) { pendingConnect = n.id; setHint("つなぐ先のノードをクリック"); render(); }
+    else if (pendingConnect !== n.id) { const from = pendingConnect; pendingConnect = null; setHint(""); addElem(from, n.id, connectType); }
+    return;
+  }
+  const p = toWorld(ev);
+  drag = { id: n.id, dx: n.x - p.x, dy: n.y - p.y, moved: false };
+  canvas.setPointerCapture(ev.pointerId);
+  select("node", n.id);
+}
+canvas.addEventListener("pointerdown", ev => {
+  const p = toWorld(ev);
+  if (tool === "add") { addNode(p.x, p.y); return; }
+  pan = { x: ev.clientX, y: ev.clientY, vx: view.x, vy: view.y, moved: false };
+  canvas.setPointerCapture(ev.pointerId);
+});
+canvas.addEventListener("pointermove", ev => {
+  if (drag) {
+    const p = toWorld(ev);
+    const n = state.nodes.find(x => x.id === drag.id);
+    if (n) { n.x = p.x + drag.dx; n.y = p.y + drag.dy; drag.moved = true; render(); }
+  } else if (pan) {
+    const r = canvas.getBoundingClientRect();
+    view.x = pan.vx - (ev.clientX - pan.x) / r.width * view.w;
+    view.y = pan.vy - (ev.clientY - pan.y) / r.height * view.h;
+    if (Math.abs(ev.clientX - pan.x) + Math.abs(ev.clientY - pan.y) > 3) pan.moved = true;
+    render();
+  }
+});
+canvas.addEventListener("pointerup", () => {
+  if (drag) { if (drag.moved) save(); drag = null; }
+  if (pan) { if (!pan.moved && tool === "select") { sel = null; pendingConnect = null; render(); } pan = null; }
+});
+canvas.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const fx = (ev.clientX - r.left) / r.width, fy = (ev.clientY - r.top) / r.height;
+  const f = ev.deltaY > 0 ? 1.12 : 1 / 1.12;
+  const nw = Math.min(Math.max(view.w * f, 200), 6000), nh = nw * (view.h / view.w);
+  view.x += (view.w - nw) * fx; view.y += (view.h - nh) * fy;
+  view.w = nw; view.h = nh; render();
+}, { passive: false });
+
+document.addEventListener("keydown", ev => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+  const k = ev.key.toLowerCase();
+  if (k === "v") setTool("select");
+  else if (k === "n") setTool("add");
+  else if (k === "c") setTool("connect");
+  else if (ev.key === "Delete" || ev.key === "Backspace") { ev.preventDefault(); deleteSelected(); }
+  else if (ev.key === "Escape") { sel = null; pendingConnect = null; setTool("select"); }
+});
+
+function fitView() {
+  if (!state.nodes.length) { view = { x: 0, y: 0, w: 900, h: 560 }; return; }
+  const xs = state.nodes.map(n => n.x), ys = state.nodes.map(n => n.y);
+  const pad = 120;
+  const x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad;
+  const y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+  const r = canvas.getBoundingClientRect(), ar = (r.width || 900) / (r.height || 560);
+  let w = x1 - x0, h = y1 - y0;
+  if (w / h < ar) w = h * ar; else h = w / ar;
+  view = { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
+}
+function tidy() {
+  const a = last;
+  const order = a && a.path && a.path.length > 1 ? a.path.slice() : state.nodes.map(n => n.id);
+  state.nodes.forEach(n => { if (!order.includes(n.id)) order.push(n.id); });
+  const perCol = Math.max(3, Math.ceil(order.length / 2));
+  order.forEach((id, i) => {
+    const n = state.nodes.find(x => x.id === id);
+    if (!n) return;
+    const col = Math.floor(i / perCol), row = i % perCol;
+    n.x = 250 + col * 430;
+    n.y = 110 + (col % 2 === 0 ? row : perCol - 1 - row) * 165;   // 蛇行させて往復させる
+  });
+  fitView(); touch();
+}
+
+/* =====================================================================
+   9. 過渡計算
+   ===================================================================== */
+function runTransient() {
+  const opts = { tEnd: parseFloat($("#tr-end").value) || 600,
+                 dt: parseFloat($("#tr-dt").value) || 0.5,
+                 initial: parseFloat($("#tr-init").value) || 25 };
+  if (!state.nodes.length || !state.nodes.some(n => n.fixed !== null && n.fixed !== undefined)) { tr = null; return; }
+  tr = solveTransient(state, opts);
+  if (tr) {
+    frame = Math.min(frame, tr.frames.length - 1);
+    const s = $("#time-slider"); s.max = tr.frames.length - 1; s.value = frame;
+    $("#time-read").textContent = "t = " + (tr.times[frame] || 0).toFixed(1) + " s";
+  }
+}
+function setMode(m) {
+  mode = m;
+  $("#mode-steady").setAttribute("aria-pressed", String(m === "steady"));
+  $("#mode-transient").setAttribute("aria-pressed", String(m === "transient"));
+  stopPlay();
+  if (m === "transient") { frame = 0; runTransient(); }
+  render();
+}
+function stopPlay() { playing = false; cancelAnimationFrame(rafId); $("#btn-play").textContent = "再生"; }
+function play() {
+  if (!tr) return;
+  playing = true; $("#btn-play").textContent = "一時停止";
+  let t0 = performance.now();
+  const stepFn = now => {
+    if (!playing) return;
+    if (now - t0 > 40) {
+      t0 = now;
+      frame = (frame + 1) % tr.frames.length;
+      $("#time-slider").value = frame;
+      $("#time-read").textContent = "t = " + tr.times[frame].toFixed(1) + " s";
+      render();
+    }
+    rafId = requestAnimationFrame(stepFn);
+  };
+  rafId = requestAnimationFrame(stepFn);
+}
+
+/* =====================================================================
+   10. 入出力
+   ===================================================================== */
+const YAML_TYPE = {
+  conduction: p => ({ type: "conduction", k: p.k, thickness: p.L, area: p.A }),
+  interface: p => ({ type: "interface", resistivity: p.rho, area: p.A }),
+  convection: p => {
+    const o = { type: "convection", area: p.A };
+    if (p.mode === "fixed") o.h = p.h;
+    else if (p.mode === "nat_v") { o.correlation = "natural_vertical"; o.height = p.H; }
+    else if (p.mode === "nat_h") { o.correlation = "natural_horizontal_up"; o.char_length = p.Lc; }
+    else if (p.mode === "forced") { o.correlation = "forced_plate"; o.velocity = p.vel; o.length = p.Lp; }
+    else { o.correlation = "duct"; o.velocity = p.vel; o.hydraulic_diameter = p.Dh; }
+    return o;
+  },
+  radiation: p => ({ type: "radiation", emissivity: p.eps, view_factor: p.F, area: p.A }),
+  fin_array: p => ({ type: "fin_array", h: p.h, k: p.k, fin_thickness: p.t, fin_height: p.L,
+                     fin_width: p.W, n_fins: p.N, base_area: p.Ab }),
+  spreading: p => ({ type: "spreading", k: p.k, source_radius: p.a, plate_radius: p.b,
+                     thickness: p.t, h: p.h }),
+  flow: p => ({ type: "flow", cp: (FLUIDS[p.fluid] || FLUIDS["空気"]).cp, mass_flow: p.mdot,
+                mean: p.mean === "mean" }),
+  resistance: p => ({ type: "resistance", value: p.R }),
+};
+function slug(name, i) { return "n" + i + "_" + name.replace(/[^0-9A-Za-z]+/g, "").slice(0, 12); }
+function toYaml() {
+  const id2key = {};
+  state.nodes.forEach((n, i) => { id2key[n.id] = slug(n.name, i); });
+  let s = "# 熱回路スタジオから書き出し —— python -m thermalnet.model this.yaml\n";
+  s += "name: GUI モデル\n\nnodes:\n";
+  state.nodes.forEach(n => {
+    const parts = [];
+    if (n.heat) parts.push("heat: " + n.heat);
+    if (n.fixed !== null && n.fixed !== undefined) parts.push("fixed: " + n.fixed);
+    if (n.cap) parts.push("capacitance: " + n.cap);
+    s += `  ${id2key[n.id]}: {${parts.join(", ")}}   # ${n.name}\n`;
+  });
+  s += "\nelements:\n";
+  state.elems.forEach((e, i) => {
+    const o = YAML_TYPE[e.type](e.p);
+    const kv = Object.entries(o).filter(([k]) => k !== "type")
+      .map(([k, v]) => `${k}: ${v}`).join(", ");
+    s += `  - {name: ${ELEMENTS[e.type].label}${i + 1}, type: ${o.type}, ` +
+         `from: ${id2key[e.a]}, to: ${id2key[e.b]}, ${kv}}\n`;
+  });
+  return s;
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (err) { /* 保存できなくても動く */ }
+  try {
+    $("#yaml-out").value = toYaml();
+    $("#json-io").value = JSON.stringify(state, null, 1);
+  } catch (err) { /* 表示だけの失敗は無視 */ }
+}
+function loadPreset(key) {
+  const p = PRESETS[key].build();
+  state = { nodes: p.nodes, elems: p.elems, seq: 100 };
+  sel = null; frame = 0; fitView();
+  if (mode === "transient") runTransient();
+  save(); render();
+}
+function copyText(el) {
+  el.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(el.value).catch(() => {});
+  else { try { document.execCommand("copy"); } catch (err) { /* 選択状態で手動コピー */ } }
+}
+
+/* =====================================================================
+   11. 起動
+   ===================================================================== */
+function glyphMarkup(kind) {
+  const wire = `<line x1="0" y1="10" x2="26" y2="10" stroke="var(--muted)" stroke-width="1.4"/>`;
+  const A = "var(--accent)", S = "var(--accent-soft)";
+  switch (kind) {
+    case "cond":   return wire + `<rect x="6" y="5" width="14" height="10" rx="1.5" fill="${S}" stroke="${A}" stroke-width="1.5"/>`;
+    case "tim":    return wire + `<rect x="9" y="3" width="8" height="14" rx="1" fill="${S}" stroke="${A}" stroke-width="1.5" stroke-dasharray="2 2"/>`;
+    case "conv":   return wire + `<path d="M6 10c2-4 4 4 6 0s4-4 6 0" fill="none" stroke="${A}" stroke-width="1.6"/>`;
+    case "rad":    return wire + `<circle cx="13" cy="10" r="3" fill="${A}"/>` +
+      [0,60,120,180,240,300].map(d=>{const r=d*Math.PI/180;return `<line x1="${13+5*Math.cos(r)}" y1="${10+5*Math.sin(r)}" x2="${13+8*Math.cos(r)}" y2="${10+8*Math.sin(r)}" stroke="${A}" stroke-width="1.2"/>`;}).join("");
+    case "fin":    return wire + [0,1,2,3,4].map(i=>`<line x1="${6+i*3.5}" y1="3" x2="${6+i*3.5}" y2="17" stroke="${A}" stroke-width="1.6"/>`).join("");
+    case "spread": return wire + `<path d="M13 4 L4 16 M13 4 L13 16 M13 4 L22 16" fill="none" stroke="${A}" stroke-width="1.5"/>`;
+    case "flow":   return `<path d="M1 6h24M1 14h24" stroke="var(--muted)" stroke-width="1.2"/>` +
+      `<path d="M6 10h11m0 0l-4-3m4 3l-4 3" fill="none" stroke="${A}" stroke-width="1.6"/>`;
+    default:       return wire + `<path d="M5 10l2-5 3 10 3-10 3 10 3-10 2 5" fill="none" stroke="${A}" stroke-width="1.6"/>`;
+  }
+}
+Object.entries(ELEMENTS).forEach(([key, def]) => {
+  const b = document.createElement("button");
+  b.className = "palette-item"; b.type = "button";
+  b.innerHTML = `<svg width="26" height="20" viewBox="0 0 26 20" aria-hidden="true">` +
+    glyphMarkup(def.glyph) +
+    `</svg><span><span class="pi-name">${def.label}</span><span class="pi-sub">${def.hint}</span></span>`;
+  b.addEventListener("click", () => { connectType = key; setTool("connect"); });
+  $("#palette").appendChild(b);
+});
+Object.entries(PRESETS).forEach(([key, p]) => {
+  const b = document.createElement("button");
+  b.className = "preset"; b.type = "button";
+  b.innerHTML = `${p.name}<small>${p.desc}</small>`;
+  b.addEventListener("click", () => loadPreset(key));
+  $("#presets").appendChild(b);
+});
+$("#tool-select").addEventListener("click", () => setTool("select"));
+$("#tool-add").addEventListener("click", () => setTool("add"));
+$("#tool-connect").addEventListener("click", () => setTool("connect"));
+$("#btn-delete").addEventListener("click", deleteSelected);
+$("#btn-tidy").addEventListener("click", tidy);
+$("#btn-clear").addEventListener("click", () => {
+  state = { nodes: [], elems: [], seq: 1 }; sel = null; tr = null; fitView(); touch();
+});
+$("#mode-steady").addEventListener("click", () => setMode("steady"));
+$("#mode-transient").addEventListener("click", () => setMode("transient"));
+$("#btn-play").addEventListener("click", () => (playing ? stopPlay() : play()));
+$("#time-slider").addEventListener("input", ev => {
+  stopPlay(); frame = parseInt(ev.target.value, 10);
+  if (tr) $("#time-read").textContent = "t = " + tr.times[frame].toFixed(1) + " s";
+  render();
+});
+["tr-end", "tr-dt", "tr-init"].forEach(id =>
+  $("#" + id).addEventListener("change", () => { frame = 0; runTransient(); render(); }));
+$("#limit").addEventListener("input", () => render());
+$("#btn-copy-yaml").addEventListener("click", () => copyText($("#yaml-out")));
+$("#btn-copy-json").addEventListener("click", () => copyText($("#json-io")));
+$("#btn-load-json").addEventListener("click", () => {
+  try {
+    const data = JSON.parse($("#json-io").value);
+    if (!data.nodes || !data.elems) throw new Error("nodes と elems が要ります");
+    state = { nodes: data.nodes, elems: data.elems, seq: (data.seq || 100) + 1 };
+    sel = null; fitView(); touch();
+  } catch (err) { alert("読み込めません: " + err.message); }
+});
+window.addEventListener("resize", () => render());
+if (window.matchMedia) {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", () => render());
+}
+
+(function init() {
+  let restored = null;
+  try { restored = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch (err) { restored = null; }
+  if (restored && restored.nodes && restored.nodes.length) state = restored;
+  else state = { nodes: PRESETS.cpu.build().nodes, elems: PRESETS.cpu.build().elems, seq: 100 };
+  fitView(); save(); render();
+})();
+</script>
