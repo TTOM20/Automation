@@ -1,0 +1,1318 @@
+<title>熱の通り道</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#EBEEF1; --surface:#FFFFFF; --surface-2:#F4F6F8; --surface-3:#EAEEF1;
+  --line:#CBD4DC; --line-soft:#E2E7EC;
+  --ink:#0F1820; --ink-2:#4B5761; --ink-3:#7B8892;
+  --accent:#0F6E8C; --accent-2:#0B5468; --accent-soft:#DCEBF2;
+  --good:#2C6E52; --good-bg:#DFEEE6; --good-line:#9CC7B3;
+  --warn:#8A5410; --warn-bg:#F8EEDC; --warn-line:#DFC08C;
+  --bad:#A63528;  --bad-bg:#F8E3E0;  --bad-line:#E0AAA2;
+  --t-cold:#3E7CB1; --t-mid:#EFE1BE; --t-hot:#B23A2E;
+  --shadow:0 1px 2px rgba(16,30,42,.07), 0 8px 22px rgba(16,30,42,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1418; --surface:#171F25; --surface-2:#1C252C; --surface-3:#212B33;
+    --line:#2E3A43; --line-soft:#232D35;
+    --ink:#E3EAF0; --ink-2:#A4B1BC; --ink-3:#72818D;
+    --accent:#4FB3D0; --accent-2:#7FCBE1; --accent-soft:#123744;
+    --good:#79C7A2; --good-bg:#14291F; --good-line:#2E5744;
+    --warn:#E0A85C; --warn-bg:#2C2312; --warn-line:#57441F;
+    --bad:#E58274;  --bad-bg:#2E1815;  --bad-line:#5C2E27;
+    --t-cold:#4C88BE; --t-mid:#C9B788; --t-hot:#C7503F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.32);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1418; --surface:#171F25; --surface-2:#1C252C; --surface-3:#212B33;
+  --line:#2E3A43; --line-soft:#232D35;
+  --ink:#E3EAF0; --ink-2:#A4B1BC; --ink-3:#72818D;
+  --accent:#4FB3D0; --accent-2:#7FCBE1; --accent-soft:#123744;
+  --good:#79C7A2; --good-bg:#14291F; --good-line:#2E5744;
+  --warn:#E0A85C; --warn-bg:#2C2312; --warn-line:#57441F;
+  --bad:#E58274;  --bad-bg:#2E1815;  --bad-line:#5C2E27;
+  --t-cold:#4C88BE; --t-mid:#C9B788; --t-hot:#C7503F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.32);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif;
+  font-size:13px; line-height:1.55;
+}
+.mono,input,.num{font-variant-numeric:tabular-nums}
+button,select,input{font:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+
+/* ---------------- 全体 ---------------- */
+.wrap{max-width:1220px; margin:0 auto; padding:20px 20px 60px}
+header.top{display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; margin-bottom:6px}
+header.top h1{margin:0; font-size:21px; font-weight:700; letter-spacing:.01em}
+header.top .sub{font-size:12px; color:var(--ink-3); padding-bottom:3px}
+.lead{
+  margin:2px 0 18px; color:var(--ink-2); font-size:12.5px; max-width:62ch;
+}
+.toolrow{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px}
+select.pick, button.act{
+  background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 11px;
+}
+button.act:hover, select.pick:hover{background:var(--surface-3); border-color:var(--ink-3)}
+button.act.ghost{background:transparent; border-color:transparent; color:var(--ink-2)}
+button.act.ghost:hover{background:var(--surface-3); border-color:var(--line)}
+
+.cols{display:grid; grid-template-columns:minmax(0,1fr) 356px; gap:22px; align-items:start}
+
+/* ---------------- 積層 ---------------- */
+.stackhead{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px}
+.stackhead h2{margin:0; font-size:11px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3)}
+.stackhead .legend{font-size:11px; color:var(--ink-3)}
+
+.stack{display:grid; grid-template-columns:78px minmax(0,1fr); gap:0 12px}
+
+.tnode{
+  grid-column:1; justify-self:end; align-self:center;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px; font-weight:500;
+  white-space:nowrap; display:flex; align-items:center; gap:6px;
+}
+.tnode .dot{width:9px; height:9px; border-radius:50%; flex:none; border:1px solid rgba(0,0,0,.18)}
+.tgap{grid-column:1; height:100%; display:flex; justify-content:flex-end; padding-right:4px}
+.tgap i{display:block; width:2px; background:var(--line); border-radius:1px}
+
+.card{
+  grid-column:2; background:var(--surface); border:1px solid var(--line);
+  border-radius:9px; padding:10px 12px 11px; box-shadow:var(--shadow); position:relative;
+}
+.card.src{border-left:3px solid var(--bad)}
+.card.term{border-left:3px solid var(--accent)}
+.card + .divider{margin-top:0}
+.crow{display:flex; align-items:center; gap:9px}
+.icn{
+  width:26px; height:26px; border-radius:6px; flex:none; display:grid; place-items:center;
+  background:var(--surface-3); border:1px solid var(--line-soft);
+}
+.icn svg{display:block}
+.ctitle{font-weight:600; font-size:13.5px; min-width:0; flex:1}
+.ctitle small{display:block; font-weight:400; font-size:10.5px; color:var(--ink-3); letter-spacing:.04em}
+.cdt{
+  display:flex; align-items:center; gap:8px; flex:none;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px;
+}
+.bar{width:104px; height:9px; border-radius:3px; background:var(--surface-3); overflow:hidden; flex:none}
+.bar i{display:block; height:100%; background:var(--t-hot); opacity:.75}
+.cdt b{font-weight:600; min-width:56px; text-align:right}
+.ctools{display:flex; gap:2px; flex:none}
+.ctools button{
+  background:transparent; border:1px solid transparent; border-radius:5px;
+  color:var(--ink-3); padding:1px 5px; font-size:12px; line-height:1.5;
+}
+.ctools button:hover{background:var(--surface-3); border-color:var(--line); color:var(--ink)}
+
+.fields{display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:9px}
+.fld{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--ink-2)}
+.fld input[type="number"]{
+  width:62px; padding:2px 6px; text-align:right;
+  background:var(--surface-2); border:1px solid var(--line); border-radius:5px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12px;
+}
+.fld input[type="text"]{
+  width:118px; padding:2px 6px; background:var(--surface-2);
+  border:1px solid var(--line); border-radius:5px; font-size:12px;
+}
+.fld input.wide{width:78px}
+.fld select{
+  padding:2px 5px; background:var(--surface-2); border:1px solid var(--line);
+  border-radius:5px; font-size:12px; max-width:170px;
+}
+.fld .u{color:var(--ink-3); font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px}
+.fld input.bad{border-color:var(--bad)}
+
+.why{
+  margin-top:8px; padding-top:7px; border-top:1px dashed var(--line-soft);
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; color:var(--ink-3);
+  display:flex; flex-wrap:wrap; gap:3px 14px;
+}
+.why b{color:var(--ink-2); font-weight:500}
+
+.divider{
+  grid-column:2; display:flex; align-items:center; gap:8px; padding:5px 0; min-height:30px;
+}
+.divider .ln{flex:1; height:1px; background:var(--line-soft)}
+.divider button{
+  background:var(--surface); border:1px dashed var(--line); color:var(--ink-3);
+  border-radius:99px; padding:1px 10px; font-size:11px;
+}
+.divider button:hover{border-style:solid; border-color:var(--accent); color:var(--accent)}
+
+/* ---------------- 右レール ---------------- */
+.rail{display:grid; gap:14px; position:sticky; top:20px}
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow)}
+.panel > h3{
+  margin:0; padding:10px 14px 0; font-size:10.5px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:600;
+}
+.panel > .body{padding:9px 14px 13px}
+
+.verdict{padding:14px 15px 15px; border-radius:10px; border:1px solid var(--line)}
+.verdict.ok  {background:var(--good-bg); border-color:var(--good-line)}
+.verdict.warn{background:var(--warn-bg); border-color:var(--warn-line)}
+.verdict.ng  {background:var(--bad-bg);  border-color:var(--bad-line)}
+.verdict .lab{font-size:11px; letter-spacing:.08em; text-transform:uppercase; opacity:.8}
+.verdict .big{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:34px; font-weight:600;
+  line-height:1.1; margin:2px 0 1px; letter-spacing:-.01em;
+}
+.verdict .big span{font-size:15px; font-weight:500; margin-left:3px}
+.verdict .msg{font-size:12.5px; font-weight:600; margin-top:5px}
+.verdict.ok .msg{color:var(--good)} .verdict.warn .msg{color:var(--warn)} .verdict.ng .msg{color:var(--bad)}
+.verdict .sub{font-size:11.5px; color:var(--ink-2); margin-top:3px}
+.verdict .stats{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; opacity:.85;
+  margin-top:6px; padding-top:6px; border-top:1px solid currentColor;
+  border-top-color:color-mix(in srgb, currentColor 22%, transparent);
+}
+.limitrow{display:flex; align-items:center; gap:6px; margin-top:9px; font-size:11.5px; color:var(--ink-2)}
+.limitrow input{
+  width:60px; padding:2px 6px; text-align:right; background:var(--surface);
+  border:1px solid var(--line); border-radius:5px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12px;
+}
+
+ol.ideas{margin:0; padding:0; list-style:none; display:grid; gap:6px}
+ol.ideas li{
+  display:grid; grid-template-columns:1fr auto; gap:4px 10px; align-items:baseline;
+  padding:7px 9px; border:1px solid var(--line-soft); border-radius:7px; background:var(--surface-2);
+}
+ol.ideas .what{font-size:12px}
+ol.ideas .gain{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:13px; font-weight:600; color:var(--good);
+  white-space:nowrap;
+}
+ol.ideas .where{grid-column:1/-1; font-size:10.5px; color:var(--ink-3)}
+ol.ideas li.dim .gain{color:var(--ink-3)}
+
+ul.notes{margin:0; padding:0; list-style:none; display:grid; gap:7px}
+ul.notes li{font-size:11.5px; color:var(--ink-2); padding-left:16px; position:relative; line-height:1.5}
+ul.notes li::before{
+  content:""; position:absolute; left:3px; top:6px; width:6px; height:6px; border-radius:50%;
+  background:var(--accent);
+}
+ul.notes li.w::before{background:var(--warn)}
+ul.notes li.w{color:var(--warn)}
+ul.notes li.e::before{background:var(--bad)}
+ul.notes li.e{color:var(--bad)}
+
+table.share{width:100%; border-collapse:collapse; font-size:11.5px}
+table.share td{padding:2px 0; vertical-align:middle}
+table.share td.n{
+  text-align:right; font-family:"IBM Plex Mono",ui-monospace,monospace; width:66px; white-space:nowrap;
+}
+table.share td.g{width:78px}
+table.share .mini{height:7px; border-radius:2px; background:var(--surface-3); overflow:hidden}
+table.share .mini i{display:block; height:100%; background:var(--accent); opacity:.8}
+
+details.formulas{border-top:1px solid var(--line-soft); margin-top:2px}
+details.formulas summary{
+  padding:9px 14px; font-size:11.5px; color:var(--accent); cursor:pointer; list-style:none;
+}
+details.formulas summary::-webkit-details-marker{display:none}
+details.formulas summary::before{content:"▸ "}
+details.formulas[open] summary::before{content:"▾ "}
+details.formulas .body{padding:0 14px 13px}
+pre.calc{
+  margin:0; padding:9px 10px; background:var(--surface-2); border:1px solid var(--line-soft);
+  border-radius:6px; font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10.5px;
+  line-height:1.6; color:var(--ink-2); overflow-x:auto; white-space:pre;
+}
+
+dialog{
+  border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--ink);
+  padding:0; width:min(680px,92vw); box-shadow:var(--shadow);
+}
+dialog::backdrop{background:rgba(8,14,20,.45)}
+.dh{display:flex; align-items:center; justify-content:space-between; padding:11px 14px;
+  border-bottom:1px solid var(--line)}
+.dh h3{margin:0; font-size:13.5px}
+.db{padding:13px 14px}
+.pickgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.pickgrid button{
+  text-align:left; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+  padding:9px 11px; display:grid; gap:2px;
+}
+.pickgrid button:hover{border-color:var(--accent); background:var(--accent-soft)}
+.pickgrid b{font-size:12.5px}
+.pickgrid span{font-size:11px; color:var(--ink-3); line-height:1.45}
+textarea{
+  width:100%; height:320px; resize:vertical; background:var(--surface-2); color:var(--ink);
+  border:1px solid var(--line); border-radius:7px; padding:9px; white-space:pre;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11.5px; line-height:1.55;
+}
+.df{display:flex; gap:8px; align-items:center; padding:0 14px 13px}
+.df .msg{font-size:11.5px; color:var(--ink-3)}
+
+@media (max-width:940px){
+  .cols{grid-template-columns:1fr}
+  .rail{position:static}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>熱の通り道</h1>
+    <div class="sub">部品を積むと、熱がどこで詰まるかがわかります</div>
+  </header>
+  <p class="lead">
+    熱抵抗も熱伝達率も入力しません。<b>材質・寸法・発熱量・風</b>を入れるだけで、
+    伝導・拡がり・接触・対流・輻射・流体の温度上昇を教科書どおりに計算します。
+  </p>
+
+  <div class="toolrow">
+    <select class="pick" id="preset">
+      <option value="">例をひらく…</option>
+      <option value="fan">ヒートシンク＋ファンで冷やす</option>
+      <option value="board">基板の上の IC(自然空冷)</option>
+      <option value="case">アルミ筐体から放熱する</option>
+      <option value="water">パワーモジュールを水冷する</option>
+    </select>
+    <button class="act ghost" id="btn-yaml">YAML で書き出す</button>
+    <button class="act ghost" id="btn-reset">最初から</button>
+  </div>
+
+  <div class="cols">
+    <section>
+      <div class="stackhead">
+        <h2>熱の通り道</h2>
+        <div class="legend">上が発熱、下が逃げ先。バーは各層で捨てている温度差</div>
+      </div>
+      <div class="stack" id="stack"></div>
+    </section>
+
+    <aside class="rail">
+      <div class="verdict" id="verdict">
+        <div class="lab">いちばん熱いところ</div>
+        <div class="big" id="v-temp">—<span>degC</span></div>
+        <div class="msg" id="v-msg">—</div>
+        <div class="sub" id="v-sub">—</div>
+        <div class="sub stats" id="v-stats"></div>
+        <div class="limitrow">
+          <span>許容温度</span>
+          <input type="number" id="v-limit" step="any">
+          <span class="u mono">degC</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>効く順(自動で試算)</h3>
+        <div class="body"><ol class="ideas" id="ideas"></ol></div>
+      </div>
+
+      <div class="panel">
+        <h3>温度差の内訳</h3>
+        <div class="body"><table class="share"><tbody id="share"></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <h3>この計算の前提</h3>
+        <div class="body"><ul class="notes" id="notes"></ul></div>
+        <details class="formulas">
+          <summary>使った式と途中の値を見る</summary>
+          <div class="body"><pre class="calc" id="calc"></pre></div>
+        </details>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<dialog id="dlg-add">
+  <div class="dh"><h3>どんな層を足しますか</h3><button class="act ghost" id="add-x">閉じる</button></div>
+  <div class="db"><div class="pickgrid" id="pickgrid"></div></div>
+</dialog>
+
+<dialog id="dlg-text">
+  <div class="dh"><h3 id="tx-title">書き出し</h3><button class="act ghost" id="tx-x">閉じる</button></div>
+  <div class="db"><textarea id="tx-area" spellcheck="false"></textarea></div>
+  <div class="df"><button class="act" id="tx-copy">コピー</button><span class="msg" id="tx-msg"></span></div>
+</dialog>
+
+<script>
+"use strict";
+/* =====================================================================
+   熱の通り道 --- 物性と相関式
+   式は Python 版 thermalnet/elements.py, fluids.py と同じものです。
+   ===================================================================== */
+const SIGMA = 5.670374419e-8, T_ABS = 273.15, G_ACC = 9.80665;
+
+const MATERIALS = {
+  "アルミ":        { k: 167 },
+  "アルミ合金":     { k: 200 },
+  "銅":           { k: 390 },
+  "鉄・鋼":        { k: 50  },
+  "ステンレス":     { k: 15  },
+  "シリコン":       { k: 120 },
+  "AlN セラミック": { k: 170 },
+  "アルミナ":       { k: 30  },
+  "はんだ":        { k: 58  },
+  "基板(銅箔つき)":  { k: 15  },
+  "FR4 基板(銅なし)": { k: 0.35 },
+  "樹脂":          { k: 0.2 },
+};
+const TIMS = {
+  "シリコングリス":      { k: 1.0 },
+  "高性能グリス":        { k: 3.0 },
+  "熱伝導シート":        { k: 2.0 },
+  "相変化シート":        { k: 1.5 },
+  "薄い両面テープ":      { k: 0.6 },
+  "はんだ付け":          { k: 58  },
+};
+/* 金属どうしの接触熱コンダクタンス [W/(m2 K)] の目安 (Incropera 表 3.2 相当) */
+const CONTACTS = { "軽く当てているだけ": 1000, "ねじ止め": 3000, "強く締結(平滑面)": 10000 };
+/* 表面の放射率 */
+const SURFACES = { "黒アルマイト・黒塗装": 0.9, "白・淡色塗装": 0.85, "アルマイト(銀)": 0.6,
+                   "生アルミ(光沢)": 0.1, "磨いた銅": 0.05 };
+
+/* 1 atm 空気 (Incropera 表 A.4 を線形補間) */
+const AIR_T  = [250, 300, 350, 400, 450, 500];
+const AIR_K  = [.02227, .02624, .03003, .03365, .03707, .04038];
+const AIR_NU = [11.44e-6, 15.89e-6, 20.92e-6, 26.41e-6, 32.39e-6, 38.79e-6];
+const AIR_PR = [.720, .707, .700, .690, .686, .684];
+const AIR_RHO_0 = 1.1614 * 300;                 /* rho*T = const で近似 */
+function interp(xs, ys, x) {
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs[xs.length - 1]) return ys[ys.length - 1];
+  for (let i = 1; i < xs.length; i++)
+    if (x <= xs[i]) {
+      const f = (x - xs[i - 1]) / (xs[i] - xs[i - 1]);
+      return ys[i - 1] + f * (ys[i] - ys[i - 1]);
+    }
+  return ys[ys.length - 1];
+}
+function airProps(tC) {
+  const tk = Math.min(Math.max(tC + T_ABS, 250), 500);
+  const nu = interp(AIR_T, AIR_NU, tk), pr = interp(AIR_T, AIR_PR, tk);
+  return { k: interp(AIR_T, AIR_K, tk), nu, Pr: pr, alpha: nu / pr, beta: 1 / tk,
+           rho: AIR_RHO_0 / tk, cp: 1007 };
+}
+/* 水 (40 degC 一定として扱う) */
+const WATER = { k: 0.631, nu: 6.58e-7, Pr: 4.32, rho: 992, cp: 4179 };
+
+/* 垂直平板の自然対流 (Churchill & Chu) */
+function hNaturalVertical(ts, tf, height) {
+  const dt = Math.abs(ts - tf);
+  if (dt < 1e-9 || height <= 0) return { h: 1e-6, Ra: 0 };
+  const p = airProps(0.5 * (ts + tf));
+  const ra = G_ACC * p.beta * dt * Math.pow(height, 3) / (p.nu * p.alpha);
+  const den = Math.pow(1 + Math.pow(0.492 / p.Pr, 9 / 16), 8 / 27);
+  return { h: Math.pow(0.825 + 0.387 * Math.pow(ra, 1 / 6) / den, 2) * p.k / height, Ra: ra };
+}
+/* 上向き高温水平面 */
+function hNaturalHorizontal(ts, tf, lc) {
+  const dt = Math.abs(ts - tf);
+  if (dt < 1e-9 || lc <= 0) return { h: 1e-6, Ra: 0 };
+  const p = airProps(0.5 * (ts + tf));
+  const ra = G_ACC * p.beta * dt * Math.pow(lc, 3) / (p.nu * p.alpha);
+  const nu = ra <= 1e7 ? 0.54 * Math.pow(ra, 0.25) : 0.15 * Math.pow(ra, 1 / 3);
+  return { h: nu * p.k / lc, Ra: ra };
+}
+/* 平板の強制対流 (平均 Nu) */
+function hFlatPlate(vel, len, tfilm) {
+  if (vel <= 0 || len <= 0) return { h: 1e-6, Re: 0 };
+  const p = airProps(tfilm), re = vel * len / p.nu;
+  const nu = re < 5e5 ? 0.664 * Math.sqrt(re) * Math.cbrt(p.Pr)
+                      : (0.037 * Math.pow(re, 0.8) - 871) * Math.cbrt(p.Pr);
+  return { h: Math.max(nu, 0.1) * p.k / len, Re: re };
+}
+/* ダクト内 (フィン間流路) */
+function hDuct(vel, dh, tfilm, fluid) {
+  const p = fluid || airProps(tfilm);
+  if (vel <= 0 || dh <= 0) return { h: 1e-6, Re: 0 };
+  const re = vel * dh / p.nu;
+  const nu = re < 2300 ? 4.36 : 0.023 * Math.pow(re, 0.8) * Math.pow(p.Pr, 0.4);
+  return { h: nu * p.k / dh, Re: re };
+}
+/* 平行平板チャネルの自然対流 (Elenbaas) --- 自然空冷ヒートシンク用 */
+function hElenbaas(ts, tf, gap, height) {
+  const dt = Math.abs(ts - tf);
+  if (dt < 1e-9 || gap <= 0 || height <= 0) return { h: 1e-6, El: 0 };
+  const p = airProps(0.5 * (ts + tf));
+  const rab = G_ACC * p.beta * dt * Math.pow(gap, 3) / (p.nu * p.alpha);
+  const el = rab * gap / height;
+  const nu = (el / 24) * Math.pow(1 - Math.exp(-35 / Math.max(el, 1e-6)), 0.75);
+  return { h: Math.max(nu, 0.05) * p.k / gap, El: el };
+}
+function hRadiation(eps, ts, tsur) {
+  const a = ts + T_ABS, b = tsur + T_ABS;
+  return eps * SIGMA * (a + b) * (a * a + b * b);
+}
+function finEfficiency(h, k, t, L) {
+  const lc = L + t / 2, m = Math.sqrt(2 * h / (k * t));
+  return Math.tanh(m * lc) / (m * lc);
+}
+/* 有限厚み円板の拡がり抵抗 (Lee et al., 1995) */
+function spreadingDisk(a, b, t, k, h) {
+  if (!(a > 0 && b > a && t > 0 && k > 0 && h > 0)) return 0;
+  const eps = a / b, tau = t / b, bi = h * b / k;
+  const lam = Math.PI + 1 / (eps * Math.sqrt(Math.PI));
+  const th = Math.tanh(lam * tau);
+  const phi = (th + lam / bi) / (1 + (lam / bi) * th);
+  return 0.5 * Math.pow(1 - eps, 1.5) * phi / (k * a * Math.sqrt(Math.PI));
+}
+const rEq = area => Math.sqrt(area / Math.PI);       /* 面積 -> 等価半径 */
+
+/* =====================================================================
+   層の定義 --- 聞くのは「材質・寸法・発熱量・風」だけ
+   ===================================================================== */
+const MAT_NAMES = Object.keys(MATERIALS);
+const LAYERS = {
+  source: {
+    name: "発熱部品", tag: "熱が生まれるところ", icon: "chip", terminal: false, fixed: true,
+    fields: [
+      { k: "q",  L: "発熱",   u: "W",  step: 1 },
+      { k: "w",  L: "大きさ", u: "mm", step: 1, pair: "d" },
+    ],
+    def: { q: 65, w: 25, d: 25, lim: 100 },
+  },
+  solid: {
+    name: "板・ブロック", tag: "熱を通して広げる", icon: "plate", terminal: false,
+    fields: [
+      { k: "mat", L: "材質", sel: MAT_NAMES },
+      { k: "t",   L: "厚さ", u: "mm", step: .5 },
+      { k: "w",   L: "大きさ", u: "mm", step: 5, pair: "d" },
+    ],
+    def: { mat: "アルミ", t: 3, w: 60, d: 60 },
+  },
+  tim: {
+    name: "熱伝導材(TIM)", tag: "部品どうしの隙間を埋める", icon: "tim", terminal: false,
+    fields: [
+      { k: "kind", L: "種類", sel: Object.keys(TIMS) },
+      { k: "t",    L: "厚さ", u: "mm", step: .05 },
+    ],
+    def: { kind: "シリコングリス", t: 0.1 },
+  },
+  contact: {
+    name: "金属どうしの接触", tag: "TIM を挟まない面", icon: "contact", terminal: false,
+    fields: [{ k: "kind", L: "締め方", sel: Object.keys(CONTACTS) }],
+    def: { kind: "ねじ止め" },
+  },
+  heatsink: {
+    name: "ヒートシンク", tag: "ここで空気に捨てる", icon: "fins", terminal: true,
+    fields: [
+      { k: "mat",  L: "材質", sel: MAT_NAMES },
+      { k: "w",    L: "大きさ", u: "mm", step: 5, pair: "d" },
+      { k: "base", L: "ベース厚", u: "mm", step: .5 },
+      { k: "n",    L: "フィン枚数", u: "枚", step: 1 },
+      { k: "fh",   L: "フィン高さ", u: "mm", step: 2 },
+      { k: "ft",   L: "フィン厚", u: "mm", step: .2 },
+      { k: "vel",  L: "風速", u: "m/s", step: .5 },
+      { k: "surf", L: "表面", sel: Object.keys(SURFACES) },
+    ],
+    def: { mat: "アルミ", w: 80, d: 80, base: 5, n: 20, fh: 30, ft: 1.5, vel: 2,
+           surf: "黒アルマイト・黒塗装" },
+  },
+  air: {
+    name: "空気にさらす面", tag: "ここで空気に捨てる", icon: "air", terminal: true,
+    fields: [
+      { k: "dir",   L: "向き", sel: ["垂直", "上向き(水平)"] },
+      { k: "vel",   L: "風速", u: "m/s", step: .5 },
+      { k: "surf",  L: "表面", sel: Object.keys(SURFACES) },
+      { k: "sides", L: "放熱面", sel: ["片面", "両面"] },
+    ],
+    def: { dir: "垂直", vel: 0, surf: "黒アルマイト・黒塗装", sides: "片面" },
+  },
+  water: {
+    name: "水冷", tag: "ここで冷却水に捨てる", icon: "water", terminal: true,
+    fields: [
+      { k: "flow", L: "流量", u: "L/min", step: .5 },
+      { k: "dia",  L: "流路の内径", u: "mm", step: 1 },
+      { k: "len",  L: "流路の長さ", u: "mm", step: 10 },
+      { k: "nch",  L: "流路の本数", u: "本", step: 1 },
+    ],
+    def: { flow: 4, dia: 6, len: 300, nch: 2 },
+  },
+};
+
+/* =====================================================================
+   ソルバ --- 下(逃げ先)から積み上げて、表面温度が落ち着くまで繰り返す
+   ===================================================================== */
+const mm = v => (Number(v) || 0) / 1000;
+const area = L => mm(L.w) * mm(L.d);
+
+function solve(model) {
+  const Ls = model.layers, amb = Number(model.amb) || 0;
+  const src = Ls[0];
+  const Q = Math.max(0, Number(src.q) || 0);
+  const warn = [], note = [];
+
+  /* --- 各層に「熱が入ってくる面積」を配る --- */
+  const foot = [];                                   /* 層 i に熱が入る面積 [m2] */
+  let cur = area(src);
+  for (let i = 0; i < Ls.length; i++) {
+    foot[i] = cur;
+    const L = Ls[i];
+    if (L.type === "solid" || L.type === "heatsink") cur = Math.max(cur, area(L));
+  }
+  if (Ls.length < 2) warn.push("熱の逃げ先がありません。いちばん下に放熱する層を足してください。");
+  else if (!LAYERS[Ls[Ls.length - 1].type].terminal)
+    warn.push("いちばん下が放熱する層ではありません。ヒートシンク・空気にさらす面・水冷のどれかで終えてください。");
+
+  /* --- 表面温度を仮置きして反復 --- */
+  let ts = amb + 30, out = null;
+  for (let it = 0; it < 60; it++) {
+    const res = build(Ls, foot, amb, Q, ts);
+    const tsNew = amb + Q * res.termR;               /* 終端層に入る温度 */
+    const relax = 0.5;
+    const next = ts + relax * (tsNew - ts);
+    const done = Math.abs(next - ts) < 1e-6;
+    ts = next; out = res;
+    if (done && it > 3) { out.iters = it + 1; break; }
+    out.iters = it + 1;
+  }
+
+  /* --- 温度を上から並べる --- */
+  let acc = 0;
+  const rTot = out.rows.reduce((s, r) => s + r.R, 0);
+  const temps = [];                                  /* temps[i] = 層 i の上面温度 */
+  for (let i = Ls.length - 1; i >= 0; i--) {
+    acc += out.rows[i].R;
+    temps[i] = amb + Q * acc;
+  }
+  out.rows.forEach((r, i) => { r.dT = Q * r.R; r.tTop = temps[i]; });
+
+  return { ok: warn.length === 0, Q, amb, rTot, tMax: temps[0], rows: out.rows,
+           parts: out.parts, warn, note: out.note.concat(note), iters: out.iters,
+           limit: Number(src.lim) || 0 };
+}
+
+/* 1 回ぶんの抵抗計算(下から積み上げる) */
+function build(Ls, foot, amb, Q, tsGuess) {
+  const rows = Ls.map(() => ({ R: 0, parts: [], meta: [] }));
+  const note = [];
+  let down = 0;                                      /* 自分より下の合計抵抗 */
+  let termR = 0;
+
+  for (let i = Ls.length - 1; i >= 0; i--) {
+    const L = Ls[i], row = rows[i], Ain = foot[i];
+    const push = (label, R, kind) => { if (R > 0 && isFinite(R)) { row.parts.push({ label, R, kind }); row.R += R; } };
+
+    if (L.type === "source") {
+      /* 発熱部品そのものは温度が一様とみなす(内部の抵抗は入れない) */
+
+    } else if (L.type === "solid") {
+      const k = MATERIALS[L.mat] ? MATERIALS[L.mat].k : 200;
+      const A = area(L), t = mm(L.t);
+      if (A <= 0 || t <= 0) { row.bad = "寸法を入れてください"; }
+      else {
+        push("厚み方向の伝導", t / (k * A), "cond");
+        if (Ain < A * 0.98) {
+          const h = down > 0 ? 1 / (down * A) : 1e4;
+          const rs = spreadingDisk(rEq(Ain), rEq(A), t, k, h);
+          push("熱の広がり", rs, "spread");
+          row.meta.push(`板の面積 ${(A * 1e4).toFixed(1)} cm2 / 熱が入る面積 ${(Ain * 1e4).toFixed(1)} cm2`);
+        } else if (Ain > A * 1.02) {
+          note.push({ t: `「${L.name}」は上の層より小さいので、熱の通り道が絞られています。`, lv: "w" });
+        }
+        const hEq = down > 0 ? 1 / (down * A) : 0;
+        if (hEq > 0) row.meta.push(`Bi = ${(hEq * t / k).toFixed(3)} (下流から見た等価 h = ${hEq.toFixed(0)} W/m2K)`);
+      }
+
+    } else if (L.type === "tim") {
+      const k = TIMS[L.kind] ? TIMS[L.kind].k : 1, t = mm(L.t);
+      const A = Math.min(Ain, foot[Math.min(i + 1, Ls.length - 1)] || Ain);
+      if (A > 0 && t > 0) {
+        push("TIM の伝導", t / (k * A), "tim");
+        row.meta.push(`k = ${k} W/mK / 接触面積 ${(A * 1e4).toFixed(1)} cm2 / 熱抵抗率 ${(t / k * 1e4).toFixed(2)} K cm2/W`);
+      }
+
+    } else if (L.type === "contact") {
+      const hc = CONTACTS[L.kind] || 3000, A = Ain;
+      if (A > 0) {
+        push("接触面", 1 / (hc * A), "contact");
+        row.meta.push(`接触熱コンダクタンス ${hc} W/m2K (目安値)`);
+      }
+
+    } else if (L.type === "heatsink") {
+      const k = MATERIALS[L.mat] ? MATERIALS[L.mat].k : 200;
+      const A = area(L), tb = mm(L.base), W = mm(L.w), D = mm(L.d);
+      const n = Math.max(1, Math.round(Number(L.n) || 1));
+      const fh = mm(L.fh), ft = mm(L.ft), vel = Math.max(0, Number(L.vel) || 0);
+      const eps = SURFACES[L.surf] !== undefined ? SURFACES[L.surf] : 0.9;
+      const gap = n > 1 ? (W - n * ft) / (n - 1) : W;
+      if (gap <= 0 || A <= 0 || tb <= 0) {
+        row.bad = gap <= 0 ? "フィンが幅に入りきりません" : "寸法を入れてください";
+      } else {
+        const tf = 0.5 * (tsGuess + amb);
+        let h, hi;
+        if (vel > 0) { hi = hDuct(vel, 2 * gap * fh / (gap + fh), tf); h = hi.h; }
+        else { hi = hElenbaas(tsGuess, amb, gap, fh); h = hi.h; }
+
+        const eta = finEfficiency(h, k, ft, fh);
+        const aFin = 2 * (fh + ft / 2) * D, aBase = Math.max(0, A - n * ft * D);
+        const rConv = 1 / (h * (aBase + n * eta * aFin));
+
+        /* 風があるなら、通り抜ける空気自身が温まるぶんを直列で足す */
+        let rFlow = 0, lpm = 0;
+        if (vel > 0) {
+          const p = airProps(tf);
+          const aFlow = gap * fh * (n - 1);
+          const mdot = p.rho * vel * aFlow;
+          lpm = aFlow * vel * 60000;
+          rFlow = mdot > 0 ? 1 / (2 * mdot * p.cp) : 0;
+        }
+        /* 対流の道(対流+空気の昇温) と 輻射の道 は並列 */
+        const rSeries = rConv + rFlow;
+        const rRad = 1 / (hRadiation(eps, tsGuess, amb) * A);
+        const rSurf = 1 / (1 / rSeries + 1 / rRad);
+        const fRad = rSurf / rRad;                   /* 輻射が運ぶ割合 */
+
+        push("ベースの伝導", tb / (k * A), "cond");
+        if (Ain < A * 0.98)
+          push("熱の広がり", spreadingDisk(rEq(Ain), rEq(A), tb, k, 1 / (rSurf * A)), "spread");
+        push("フィンから空気へ", rSurf * rConv / rSeries, "conv");
+        if (rFlow > 0) push("空気の温度上昇", rSurf * rFlow / rSeries, "flow");
+
+        row.meta.push(`h = ${h.toFixed(1)} W/m2K / フィン効率 ${(eta * 100).toFixed(0)}% / 放熱面積 ${((aBase + n * aFin) * 1e4).toFixed(0)} cm2`);
+        row.meta.push(vel > 0
+          ? `風量 ${lpm.toFixed(0)} L/min / Re = ${hi.Re.toFixed(0)} / フィン間 ${(gap * 1000).toFixed(1)} mm`
+          : `自然対流 Elenbaas El = ${hi.El.toFixed(1)} / フィン間 ${(gap * 1000).toFixed(1)} mm`);
+        row.meta.push(`輻射が ${(fRad * 100).toFixed(0)}% を運んでいます (放射率 ${eps})`);
+        row.share = { rad: fRad, eta, h, gap, flow: rFlow / rSeries };
+      }
+
+    } else if (L.type === "air") {
+      const A = Ain * (L.sides === "両面" ? 2 : 1);
+      const vel = Math.max(0, Number(L.vel) || 0);
+      const eps = SURFACES[L.surf] !== undefined ? SURFACES[L.surf] : 0.9;
+      const side = Math.sqrt(Ain);                   /* 正方形とみなした一辺 */
+      const tf = 0.5 * (tsGuess + amb);
+      let hc, info;
+      if (vel > 0) {
+        info = hFlatPlate(vel, side, tf); hc = info.h;
+        row.meta.push(`Re = ${info.Re.toExponential(1)} / 代表長さ ${(side * 1000).toFixed(0)} mm`);
+      } else if (L.dir === "垂直") {
+        info = hNaturalVertical(tsGuess, amb, side); hc = info.h;
+        row.meta.push(`Ra = ${info.Ra.toExponential(1)} / 高さ ${(side * 1000).toFixed(0)} mm (垂直面)`);
+      } else {
+        info = hNaturalHorizontal(tsGuess, amb, side / 4); hc = info.h;
+        row.meta.push(`Ra = ${info.Ra.toExponential(1)} / 代表長さ A/P = ${(side / 4 * 1000).toFixed(0)} mm (上向き)`);
+      }
+      const hr = hRadiation(eps, tsGuess, amb);
+      if (A > 0) {
+        push("空気へ捨てる(対流+輻射)", 1 / ((hc + hr) * A), "conv");
+        row.meta.push(`h(対流) = ${hc.toFixed(1)} / h(輻射) = ${hr.toFixed(1)} W/m2K / 放熱面積 ${(A * 1e4).toFixed(0)} cm2`);
+        row.share = { rad: hr / (hc + hr), hc, hr };
+      } else row.bad = "放熱する面積がありません";
+
+    } else if (L.type === "water") {
+      const flow = Math.max(0, Number(L.flow) || 0) / 60000;   /* L/min -> m3/s */
+      const dia = mm(L.dia), len = mm(L.len), nch = Math.max(1, Math.round(Number(L.nch) || 1));
+      if (dia > 0 && len > 0 && flow > 0) {
+        const ach = Math.PI * dia * dia / 4 * nch;
+        const vel = flow / ach;
+        const info = hDuct(vel, dia, 40, WATER);
+        const aWet = Math.PI * dia * len * nch;
+        const mdot = WATER.rho * flow;
+        push("流路の壁から水へ", 1 / (info.h * aWet), "conv");
+        push("水の温度上昇", 1 / (2 * mdot * WATER.cp), "flow");
+        row.meta.push(`流速 ${vel.toFixed(2)} m/s / Re = ${info.Re.toFixed(0)} / h = ${info.h.toFixed(0)} W/m2K`);
+        row.meta.push(`水の出口温度上昇 ${(Q / (mdot * WATER.cp)).toFixed(1)} K`);
+        row.share = { rise: Q / (mdot * WATER.cp) };
+      } else row.bad = "流量と流路の寸法を入れてください";
+    }
+
+    if (LAYERS[L.type].terminal) termR = row.R;
+    down += row.R;
+  }
+
+  const parts = [];
+  rows.forEach((r, i) => r.parts.forEach(p => parts.push({ ...p, layer: i })));
+  return { rows, parts, note, termR: termR || down };
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   画面 --- 構造が変わったときだけ組み直し、
+            数値を打っている間は数字とバーだけを書き換える
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const STORE = "heat-path-v1";
+let model = null, sol = null, seq = 1;
+const cardEls = new Map();
+
+const ICONS = {
+  chip:    '<rect x="3" y="3" width="10" height="10" rx="1.5"/><path d="M6 1v2M10 1v2M6 13v2M10 13v2M1 6h2M1 10h2M13 6h2M13 10h2"/>',
+  plate:   '<rect x="1.5" y="6" width="13" height="4" rx="1"/>',
+  tim:     '<path d="M1.5 8h13M2.5 5.5c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 2.5-1M2.5 11.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 2.5 1"/>',
+  contact: '<path d="M1.5 6.5h13M1.5 9.5h13M5 3v2M11 3v2M5 11v2M11 11v2"/>',
+  fins:    '<path d="M1.5 12h13M3 12V3M6 12V3M9 12V3M12 12V3"/>',
+  air:     '<path d="M1 5h8a2 2 0 1 0-2-2M1 8h11a2 2 0 1 1-2 2M1 11h7"/>',
+  water:   '<path d="M8 1.5C8 1.5 3 7 3 10a5 5 0 0 0 10 0c0-3-5-8.5-5-8.5z"/>',
+};
+function icon(name) {
+  return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ""}</svg>`;
+}
+function fmt(v, d) {
+  if (!Number.isFinite(v)) return "—";
+  const a = Math.abs(v);
+  if (a !== 0 && (a < 1e-3 || a >= 1e5)) return v.toExponential(1);
+  return v.toFixed(d === undefined ? (a < 10 ? 2 : 1) : d);
+}
+const fmtIn = v => Number.isFinite(Number(v)) ? String(+Number(v).toPrecision(12)) : "";
+const clone = o => JSON.parse(JSON.stringify(o));
+
+/* ---- 温度の色 ---- */
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hexToRgb(h) {
+  h = h.replace("#", "");
+  if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+const mixc = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
+function tempColor(t, lo, hi) {
+  const c1 = hexToRgb(cssVar("--t-cold")), c2 = hexToRgb(cssVar("--t-mid")), c3 = hexToRgb(cssVar("--t-hot"));
+  let f = (hi - lo) < 1e-9 ? 0.5 : (t - lo) / (hi - lo);
+  f = Math.max(0, Math.min(1, f));
+  const c = f < 0.5 ? mixc(c1, c2, f * 2) : mixc(c2, c3, (f - 0.5) * 2);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* =====================================================================
+   積層の描画
+   ===================================================================== */
+function newLayer(type) {
+  const d = LAYERS[type];
+  return Object.assign({ id: "L" + (seq++), type, name: d.name }, clone(d.def));
+}
+
+function renderStack() {
+  const root = $("#stack");
+  root.textContent = "";
+  cardEls.clear();
+  let row = 1;
+
+  model.layers.forEach((L, i) => {
+    const def = LAYERS[L.type];
+
+    /* --- 温度の目盛り --- */
+    const t = document.createElement("div");
+    t.className = "tnode"; t.style.gridRow = row; t.style.alignSelf = "start";
+    t.style.marginTop = "9px";
+    t.innerHTML = '<span class="dot"></span><span class="v">—</span>';
+
+    /* --- カード --- */
+    const card = document.createElement("div");
+    card.className = "card" + (L.type === "source" ? " src" : def.terminal ? " term" : "");
+    card.style.gridRow = row;
+
+    const head = document.createElement("div");
+    head.className = "crow";
+    head.innerHTML =
+      `<div class="icn">${icon(def.icon)}</div>` +
+      `<div class="ctitle"><span class="nm"></span><small>${def.tag}</small></div>` +
+      `<div class="cdt"><div class="bar"><i></i></div><b>—</b></div>` +
+      `<div class="ctools"></div>`;
+    const nameSpan = head.querySelector(".nm");
+    nameSpan.contentEditable = "true";
+    nameSpan.spellcheck = false;
+    nameSpan.textContent = L.name;
+    nameSpan.addEventListener("input", () => { L.name = nameSpan.textContent.trim() || def.name; paint(); });
+    nameSpan.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); nameSpan.blur(); } });
+
+    if (L.type === "source") head.querySelector(".cdt").remove();
+
+    const tools = head.querySelector(".ctools");
+    if (!def.fixed) {
+      tools.appendChild(mkBtn("↑", "ひとつ上へ", () => moveLayer(i, -1)));
+      tools.appendChild(mkBtn("↓", "ひとつ下へ", () => moveLayer(i, +1)));
+      tools.appendChild(mkBtn("✕", "この層を消す", () => removeLayer(i)));
+    }
+    card.appendChild(head);
+
+    /* --- 入力欄 --- */
+    const fields = document.createElement("div");
+    fields.className = "fields";
+    def.fields.forEach(f => fields.appendChild(mkField(L, f)));
+    card.appendChild(fields);
+
+    /* --- 計算の中身 --- */
+    const why = document.createElement("div");
+    why.className = "why";
+    card.appendChild(why);
+
+    root.append(t, card);
+    cardEls.set(L.id, { t, card, bar: card.querySelector(".bar i"), dt: card.querySelector(".cdt b"), why });
+    row++;
+
+    /* --- 層を足すボタン --- */
+    const div = document.createElement("div");
+    div.className = "divider"; div.style.gridRow = row;
+    const btn = document.createElement("button");
+    btn.textContent = "＋ ここに層を足す";
+    btn.addEventListener("click", () => openPicker(i + 1));
+    div.append(spanEl("ln"), btn, spanEl("ln"));
+    root.appendChild(div);
+    row++;
+  });
+
+  /* --- 周囲 --- */
+  const at = document.createElement("div");
+  at.className = "tnode"; at.style.gridRow = row; at.style.alignSelf = "start";
+  at.style.marginTop = "9px";
+  at.innerHTML = '<span class="dot"></span><span class="v">—</span>';
+  const ac = document.createElement("div");
+  ac.className = "card"; ac.style.gridRow = row;
+  ac.innerHTML = `<div class="crow"><div class="icn">${icon("air")}</div>` +
+    `<div class="ctitle">まわり(逃げ先)<small>ここより下には熱は行かない</small></div></div>`;
+  const af = document.createElement("div");
+  af.className = "fields";
+  af.appendChild(mkField(model, { k: "amb", L: "周囲の温度", u: "degC", step: 5 }));
+  ac.appendChild(af);
+  root.append(at, ac);
+  cardEls.set("__amb", { t: at });
+
+  paint();
+}
+function spanEl(cls) { const s = document.createElement("span"); s.className = cls; return s; }
+function mkBtn(label, title, fn) {
+  const b = document.createElement("button");
+  b.textContent = label; b.title = title;
+  b.addEventListener("click", fn);
+  return b;
+}
+function mkField(obj, f) {
+  const wrap = document.createElement("div");
+  wrap.className = "fld";
+  const lab = document.createElement("span"); lab.textContent = f.L;
+  wrap.appendChild(lab);
+
+  if (f.sel) {
+    const s = document.createElement("select");
+    f.sel.forEach(o => { const op = document.createElement("option"); op.value = o; op.textContent = o; s.appendChild(op); });
+    s.value = obj[f.k];
+    s.addEventListener("change", () => { obj[f.k] = s.value; paint(); });
+    wrap.appendChild(s);
+    if (f.k === "mat") { const u = document.createElement("span"); u.className = "u"; u.dataset.kOf = "1"; wrap.appendChild(u); }
+    return wrap;
+  }
+  wrap.appendChild(numInput(obj, f.k, f.step));
+  if (f.pair) {
+    const x = document.createElement("span"); x.className = "u"; x.textContent = "x";
+    wrap.append(x, numInput(obj, f.pair, f.step));
+  }
+  if (f.u) { const u = document.createElement("span"); u.className = "u"; u.textContent = f.u; wrap.appendChild(u); }
+  return wrap;
+}
+function numInput(obj, key, step) {
+  const i = document.createElement("input");
+  i.type = "number"; i.step = step || "any"; i.value = fmtIn(obj[key]);
+  i.addEventListener("input", () => {
+    const v = parseFloat(i.value);
+    if (Number.isFinite(v)) { i.classList.remove("bad"); obj[key] = v; paint(); }
+    else i.classList.add("bad");
+  });
+  i.addEventListener("blur", () => { i.value = fmtIn(obj[key]); i.classList.remove("bad"); });
+  return i;
+}
+
+/* =====================================================================
+   数値の更新 --- ここでは DOM を作らない
+   ===================================================================== */
+function paint() {
+  sol = solve(model);
+  const lo = sol.amb, hi = Math.max(sol.tMax, sol.amb + 1);
+  const maxDT = Math.max(1e-9, ...sol.rows.map(r => r.dT || 0));
+
+  model.layers.forEach((L, i) => {
+    const el = cardEls.get(L.id); if (!el) return;
+    const r = sol.rows[i];
+    const tt = r.tTop;
+    el.t.querySelector(".v").textContent = Number.isFinite(tt) ? fmt(tt, 1) : "—";
+    el.t.querySelector(".dot").style.background = Number.isFinite(tt) ? tempColor(tt, lo, hi) : "transparent";
+    if (!el.dt || !el.bar) {
+      /* 発熱部品にはバーが無い */
+    } else {
+      el.dt.textContent = r.dT > 0 ? fmt(r.dT, 1) + " K" : (r.bad ? "" : "0 K");
+      el.bar.style.width = (100 * (r.dT || 0) / maxDT).toFixed(1) + "%";
+    }
+    const bits = [];
+    if (r.bad) bits.push(`<b style="color:var(--bad)">${r.bad}</b>`);
+    if (r.R > 0) bits.push(`<b>熱抵抗</b> ${fmt(r.R, 4)} K/W`);
+    r.parts.forEach(p => { if (r.parts.length > 1) bits.push(`${p.label} ${fmt(p.R, 4)}`); });
+    r.meta.forEach(m => bits.push(m));
+    el.why.innerHTML = bits.map(b => "<span>" + b + "</span>").join("");
+    el.why.style.display = bits.length ? "" : "none";
+    const kEl = el.card.querySelector('[data-k-of]');
+    if (kEl) kEl.textContent = MATERIALS[L.mat] ? "k = " + MATERIALS[L.mat].k + " W/mK" : "";
+  });
+  const amb = cardEls.get("__amb");
+  if (amb) {
+    amb.t.querySelector(".v").textContent = fmt(sol.amb, 1);
+    amb.t.querySelector(".dot").style.background = tempColor(sol.amb, lo, hi);
+  }
+
+  paintVerdict();
+  paintShare();
+  paintIdeas();
+  paintNotes();
+  save();
+}
+
+function paintVerdict() {
+  const box = $("#verdict"), lim = Number(sol.limit) || 0;
+  const t = sol.tMax, margin = lim - t;
+  $("#v-temp").firstChild.nodeValue = Number.isFinite(t) ? fmt(t, 1) : "—";
+  const li = $("#v-limit");
+  if (document.activeElement !== li) li.value = fmtIn(lim);
+
+  box.classList.remove("ok", "warn", "ng");
+  let msg, sub;
+  if (!sol.ok) {
+    box.classList.add("warn");
+    msg = "まだ計算できません"; sub = sol.warn[0];
+  } else if (!Number.isFinite(t)) {
+    box.classList.add("warn"); msg = "入力を確認してください"; sub = "";
+  } else if (margin >= 15) {
+    box.classList.add("ok");
+    msg = `余裕あり  +${fmt(margin, 1)} K`;
+    sub = `許容 ${fmt(lim, 0)} degC に対して ${fmt(margin, 1)} K の余裕があります。`;
+  } else if (margin >= 5) {
+    box.classList.add("warn");
+    msg = `ぎりぎり  +${fmt(margin, 1)} K`;
+    sub = `許容まで ${fmt(margin, 1)} K しかありません。周囲温度が上がると危ないです。`;
+  } else if (margin >= 0) {
+    box.classList.add("ng");
+    msg = `余裕なし  +${fmt(margin, 1)} K`;
+    sub = "ばらつきや経年でかんたんに超えます。下の「効く順」を見てください。";
+  } else {
+    box.classList.add("ng");
+    msg = `${fmt(-margin, 1)} K 超えています`;
+    sub = "このままでは許容温度を超えます。下の「効く順」を見てください。";
+  }
+  $("#v-msg").textContent = msg;
+  $("#v-sub").textContent = sub;
+  $("#v-stats").textContent = (sol.ok && Number.isFinite(t))
+    ? `発熱 ${fmt(sol.Q, 0)} W  /  周囲 ${fmt(sol.amb, 0)} degC  /  全体の熱抵抗 ${fmt(sol.rTot, 3)} K/W`
+    : "";
+}
+
+function paintShare() {
+  const tb = $("#share");
+  const list = sol.parts.slice().filter(p => p.R > 0).sort((a, b) => b.R - a.R);
+  const total = list.reduce((s, p) => s + p.R, 0) || 1;
+  tb.textContent = "";
+  list.slice(0, 9).forEach(p => {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    name.textContent = `${model.layers[p.layer].name} / ${p.label}`;
+    name.style.overflow = "hidden"; name.style.textOverflow = "ellipsis"; name.style.whiteSpace = "nowrap";
+    const g = document.createElement("td"); g.className = "g";
+    g.innerHTML = `<span class="mini"><i style="width:${(100 * p.R / total).toFixed(1)}%"></i></span>`;
+    const n = document.createElement("td"); n.className = "n";
+    n.textContent = `${fmt(sol.Q * p.R, 1)} K  ${(100 * p.R / total).toFixed(0)}%`;
+    tr.append(name, g, n); tb.appendChild(tr);
+  });
+  if (!list.length) {
+    const tr = document.createElement("tr"), td = document.createElement("td");
+    td.colSpan = 3; td.textContent = "まだ計算できていません";
+    td.style.color = "var(--ink-3)"; tr.appendChild(td); tb.appendChild(tr);
+  }
+}
+
+/* --- 効く順: 実際に条件を変えて解き直す --- */
+function ideas() {
+  if (!sol.ok || !Number.isFinite(sol.tMax)) return [];
+  const base = sol.tMax, out = [];
+  const test = (what, where, mut) => {
+    const m = clone(model);
+    try { mut(m); } catch (e) { return; }
+    const s = solve(m);
+    if (s && s.ok && Number.isFinite(s.tMax)) out.push({ what, where, gain: base - s.tMax });
+  };
+  model.layers.forEach((L, i) => {
+    const at = m => m.layers[i];
+    if (L.type === "solid") {
+      if (L.mat !== "銅") test("材質を銅にする", L.name, m => { at(m).mat = "銅"; });
+      test("大きさを 1.3 倍にする", L.name, m => { at(m).w *= 1.3; at(m).d *= 1.3; });
+      test("厚さを 2 倍にする", L.name, m => { at(m).t *= 2; });
+    } else if (L.type === "tim") {
+      test("厚さを半分にする", L.name, m => { at(m).t /= 2; });
+      if (L.kind !== "高性能グリス") test("高性能グリスにする", L.name, m => { at(m).kind = "高性能グリス"; });
+    } else if (L.type === "contact") {
+      if (L.kind !== "強く締結(平滑面)") test("強く締結する", L.name, m => { at(m).kind = "強く締結(平滑面)"; });
+      test("TIM を挟む(シリコングリス 0.1 mm)", L.name, m => {
+        m.layers[i] = Object.assign(newLayer("tim"), { name: L.name + "(TIM 化)" });
+      });
+    } else if (L.type === "heatsink") {
+      test("大きさを 1.3 倍にする", L.name, m => { at(m).w *= 1.3; at(m).d *= 1.3; });
+      test("フィンを 1.5 倍の枚数にする", L.name, m => { at(m).n = Math.round(at(m).n * 1.5); });
+      test("フィンを 1.5 倍の高さにする", L.name, m => { at(m).fh *= 1.5; });
+      if (Number(L.vel) > 0) test("風速を 2 倍にする", L.name, m => { at(m).vel *= 2; });
+      else test("ファンを付ける(2 m/s)", L.name, m => { at(m).vel = 2; });
+      if (SURFACES[L.surf] < 0.5) test("表面を黒くする", L.name, m => { at(m).surf = "黒アルマイト・黒塗装"; });
+      if (L.mat !== "銅") test("ベースを銅にする", L.name, m => { at(m).mat = "銅"; });
+    } else if (L.type === "air") {
+      if (Number(L.vel) > 0) test("風速を 2 倍にする", L.name, m => { at(m).vel *= 2; });
+      else test("ファンで 2 m/s の風を当てる", L.name, m => { at(m).vel = 2; });
+      if (SURFACES[L.surf] < 0.5) test("表面を黒くする", L.name, m => { at(m).surf = "黒アルマイト・黒塗装"; });
+      if (L.sides !== "両面") test("裏面からも放熱する", L.name, m => { at(m).sides = "両面"; });
+      test("ヒートシンクを付ける", L.name, m => {
+        m.layers[i] = Object.assign(newLayer("heatsink"),
+          { name: "ヒートシンク", vel: Number(L.vel) || 0, w: 80, d: 80 });
+      });
+    } else if (L.type === "water") {
+      test("流量を 2 倍にする", L.name, m => { at(m).flow *= 2; });
+      test("流路を 2 倍の本数にする", L.name, m => { at(m).nch = Math.round(at(m).nch * 2); });
+    }
+  });
+  return out.filter(x => x.gain > 0.05).sort((a, b) => b.gain - a.gain).slice(0, 6);
+}
+function paintIdeas() {
+  const box = $("#ideas");
+  box.textContent = "";
+  const list = ideas();
+  if (!list.length) {
+    const li = document.createElement("li");
+    li.innerHTML = '<span class="what" style="color:var(--ink-3)">試せる手が見つかりませんでした。' +
+      '層を足すか、寸法を変えてみてください。</span>';
+    box.appendChild(li); return;
+  }
+  list.forEach(x => {
+    const li = document.createElement("li");
+    if (x.gain < 1) li.className = "dim";
+    li.innerHTML = `<span class="what"></span><span class="gain">-${fmt(x.gain, 1)} K</span>` +
+                   `<span class="where"></span>`;
+    li.querySelector(".what").textContent = x.what;
+    li.querySelector(".where").textContent = x.where;
+    box.appendChild(li);
+  });
+}
+
+function paintNotes() {
+  const box = $("#notes");
+  box.textContent = "";
+  const add = (t, lv) => {
+    const li = document.createElement("li");
+    if (lv) li.className = lv;
+    li.textContent = t; box.appendChild(li);
+  };
+  sol.warn.forEach(w => add(w, "e"));
+  sol.note.forEach(n => add(n.t || n, n.lv || "w"));
+
+  if (sol.ok && Number.isFinite(sol.tMax)) {
+    const tot = sol.rTot || 1;
+    const spread = sol.parts.filter(p => p.kind === "spread").reduce((s, p) => s + p.R, 0);
+    if (spread / tot > 0.45)
+      add(`熱がほとんど広がっていません(拡がり抵抗が全体の ${(100 * spread / tot).toFixed(0)}%)。` +
+          `発熱部の真下しか使えていないので、板を大きくしても効きません。` +
+          `厚くするか、熱伝導率の高い材料(銅・アルミ・銅箔つき基板)に替えるのが先です。`, "w");
+    else if (spread / tot > 0.03)
+      add(`熱の広がり(拡がり抵抗)が全体の ${(100 * spread / tot).toFixed(0)}% を占めています。` +
+          `発熱部が小さいと、板の中で熱が広がりきる前に厚み方向へ流れます。` +
+          `1D で単純に L/(kA) だけで計算すると、ここを丸ごと見落とします。`);
+    const term = sol.rows[sol.rows.length - 1];
+    if (term && term.share) {
+      if (term.share.rad !== undefined)
+        add(`放熱のうち ${(100 * term.share.rad).toFixed(0)}% は輻射(放射)です。` +
+            (term.share.rad > 0.25 ? "表面の色・処理が効いています。" : "対流が主役です。"));
+      if (term.share.eta !== undefined)
+        add(`フィン効率 ${(100 * term.share.eta).toFixed(0)}%` +
+            (term.share.eta < 0.7 ? " --- フィンが高い/薄いので先端まで熱が届いていません。" :
+             " --- フィンは十分に働いています。"));
+      if (term.share.rise !== undefined)
+        add(`冷却水は入口から出口までに ${fmt(term.share.rise, 1)} K 上がります。` +
+            `平均温度で見るため、その半分を熱抵抗に入れています。`);
+    }
+    const flow = sol.parts.filter(p => p.kind === "flow").reduce((s, p) => s + p.R, 0);
+    if (flow > 0)
+      add(`流体そのものが温まるぶん(${fmt(sol.Q * flow, 1)} K)を含めています。` +
+          `1D 化でいちばん忘れられやすい項です。`);
+    add("接触熱抵抗と TIM の値は、カタログ・文献の目安です。実物は面圧・平面度で数倍ばらつきます。");
+    add("温度が落ち着いた状態(定常)の計算です。立ち上がりの過渡は含みません。");
+  }
+
+  /* 途中の値 */
+  const lines = [];
+  lines.push(`周囲 ${fmt(sol.amb, 1)} degC / 発熱 ${fmt(sol.Q, 2)} W / 反復 ${sol.iters} 回`);
+  lines.push("");
+  model.layers.forEach((L, i) => {
+    const r = sol.rows[i];
+    lines.push(`[${i + 1}] ${L.name}  (${LAYERS[L.type].name})`);
+    lines.push(`      上面温度 ${fmt(r.tTop, 2)} degC   この層で ${fmt(r.dT, 2)} K 落ちる`);
+    r.parts.forEach(p => lines.push(`      ${p.label.padEnd(16, " ")} R = ${fmt(p.R, 5)} K/W`));
+    r.meta.forEach(m => lines.push(`      - ${m}`));
+    lines.push("");
+  });
+  lines.push(`合計 R = ${fmt(sol.rTot, 4)} K/W   最高温度 = ${fmt(sol.amb, 1)} + ${fmt(sol.Q, 1)} x ${fmt(sol.rTot, 4)} = ${fmt(sol.tMax, 2)} degC`);
+  $("#calc").textContent = lines.join("\n");
+}
+
+/* =====================================================================
+   層の追加・削除・並べ替え
+   ===================================================================== */
+let insertAt = 1;
+function openPicker(at) {
+  insertAt = at;
+  const g = $("#pickgrid");
+  g.textContent = "";
+  Object.keys(LAYERS).forEach(type => {
+    const d = LAYERS[type];
+    if (d.fixed) return;
+    const b = document.createElement("button");
+    b.innerHTML = `<b>${icon(d.icon)} ${d.name}</b><span>${describeType(type)}</span>`;
+    b.addEventListener("click", () => {
+      model.layers.splice(insertAt, 0, newLayer(type));
+      $("#dlg-add").close();
+      renderStack();
+    });
+    g.appendChild(b);
+  });
+  $("#dlg-add").showModal();
+}
+function describeType(t) {
+  return {
+    solid: "アルミ板・銅ブロック・基板など。材質と厚さと大きさを入れると、伝導と熱の広がりを計算します。",
+    tim: "グリス・熱伝導シート・はんだ。薄いのに効くので、厚さは 0.1 mm 単位で効きます。",
+    contact: "TIM を挟まず金属どうしを当てている面。締め方で数倍変わります。",
+    heatsink: "フィン付き。枚数・高さ・風速からフィン効率と空気の温度上昇まで見ます。",
+    air: "面をそのまま空気にさらす。自然対流と輻射を両方入れます。",
+    water: "冷却水で持ち去る。流量と流路寸法から流速・乱流・水の温度上昇を出します。",
+  }[t] || "";
+}
+function removeLayer(i) { model.layers.splice(i, 1); renderStack(); }
+function moveLayer(i, dir) {
+  const j = i + dir;
+  if (j < 1 || j >= model.layers.length) return;
+  const [x] = model.layers.splice(i, 1);
+  model.layers.splice(j, 0, x);
+  renderStack();
+}
+
+/* =====================================================================
+   例・保存・書き出し
+   ===================================================================== */
+function L(type, over) { return Object.assign(newLayer(type), over || {}); }
+const PRESETS = {
+  fan: () => ({ amb: 35, layers: [
+    L("source", { name: "CPU ダイ", q: 65, w: 25, d: 25, lim: 100 }),
+    L("tim", { name: "グリス", kind: "シリコングリス", t: 0.1 }),
+    L("heatsink", { name: "アルミヒートシンク", w: 80, d: 80, base: 5, n: 20, fh: 30, ft: 1.5, vel: 2 }),
+  ] }),
+  board: () => ({ amb: 30, layers: [
+    L("source", { name: "電源 IC", q: 2.5, w: 8, d: 8, lim: 125 }),
+    L("solid", { name: "基板", mat: "基板(銅箔つき)", t: 1.6, w: 80, d: 60 }),
+    L("air", { name: "基板の表面", dir: "垂直", vel: 0, surf: "黒アルマイト・黒塗装", sides: "両面" }),
+  ] }),
+  case: () => ({ amb: 30, layers: [
+    L("source", { name: "パワー素子", q: 12, w: 20, d: 20, lim: 90 }),
+    L("tim", { name: "絶縁シート", kind: "熱伝導シート", t: 0.5 }),
+    L("contact", { name: "筐体への締結", kind: "ねじ止め" }),
+    L("solid", { name: "アルミ筐体", mat: "アルミ", t: 2, w: 150, d: 150 }),
+    L("air", { name: "筐体の外表面", dir: "垂直", vel: 0, surf: "黒アルマイト・黒塗装", sides: "片面" }),
+  ] }),
+  water: () => ({ amb: 45, layers: [
+    L("source", { name: "SiC チップ", q: 250, w: 30, d: 30, lim: 125 }),
+    L("tim", { name: "はんだ", kind: "はんだ付け", t: 0.2 }),
+    L("solid", { name: "銅ベース", mat: "銅", t: 3, w: 60, d: 60 }),
+    L("tim", { name: "サーマルグリス", kind: "高性能グリス", t: 0.1 }),
+    L("water", { name: "水冷プレート", flow: 4, dia: 6, len: 300, nch: 2 }),
+  ] }),
+};
+function loadPreset(k) {
+  const p = PRESETS[k]; if (!p) return;
+  model = p(); renderStack();
+}
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify(model)); } catch (e) { /* 使えなくても動く */ }
+}
+function restore() {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (!raw) return false;
+    const m = JSON.parse(raw);
+    if (!m || !Array.isArray(m.layers) || !m.layers.length) return false;
+    if (m.layers[0].type !== "source") return false;
+    m.layers.forEach(l => { if (!LAYERS[l.type]) throw new Error("unknown layer"); });
+    model = m;
+    seq = m.layers.length + 1;
+    return true;
+  } catch (e) { return false; }
+}
+
+function slug(name, i) {
+  const ascii = (name || "").replace(/[^0-9A-Za-z_]+/g, "");
+  const type = model.layers[i] ? model.layers[i].type : "n";
+  return (ascii ? ascii.toLowerCase() : type) + "_" + (i + 1);
+}
+function toYaml() {
+  const ids = model.layers.map((l, i) => slug(l.name, i));
+  const nodes = [], els = [];
+  nodes.push(`  ${ids[0]}:   # ${model.layers[0].name}`);
+  nodes.push(`    heat: ${+Number(sol.Q).toPrecision(12)}`);
+
+  let cur = ids[0];
+  for (let i = 1; i < model.layers.length; i++) {
+    const L = model.layers[i], parts = sol.rows[i].parts;
+    parts.forEach((p, j) => {
+      let to;
+      if (j < parts.length - 1) { to = ids[i] + "_" + (j + 1); nodes.push(`  ${to}: {}   # ${L.name} の途中`); }
+      else if (i < model.layers.length - 1) { to = ids[i + 1]; nodes.push(`  ${to}: {}   # ${model.layers[i + 1].name}`); }
+      else to = "ambient";
+      els.push(`  - name: ${L.name} / ${p.label}`);
+      els.push(`    from: ${cur}`);
+      els.push(`    to: ${to}`);
+      els.push(`    type: resistance`);
+      els.push(`    value: ${+Number(p.R).toPrecision(6)}`);
+      cur = to;
+    });
+  }
+  if (cur !== "ambient") {                       /* 最後が放熱層でないとき */
+    els.push(`  - name: 逃げ先へ`);
+    els.push(`    from: ${cur}`);
+    els.push(`    to: ambient`);
+    els.push(`    type: resistance`);
+    els.push(`    value: 1`);
+  }
+  nodes.push(`  ambient:   # まわり`);
+  nodes.push(`    fixed: ${+Number(sol.amb).toPrecision(12)}`);
+
+  return ["# 「熱の通り道」から書き出し",
+          "# 各 R は材質・寸法・風速・放射率から計算した値です",
+          "# python -m thermalnet.model <file> / python -m thermalnet.report <file> で解けます",
+          "name: heat path", "nodes:", ...nodes, "elements:", ...els].join("\n") + "\n";
+}
+
+/* =====================================================================
+   起動
+   ===================================================================== */
+$("#preset").addEventListener("change", ev => { if (ev.target.value) loadPreset(ev.target.value); ev.target.value = ""; });
+$("#btn-reset").addEventListener("click", () => { loadPreset("fan"); });
+$("#add-x").addEventListener("click", () => $("#dlg-add").close());
+$("#v-limit").addEventListener("input", () => {
+  const v = parseFloat($("#v-limit").value);
+  if (Number.isFinite(v)) { model.layers[0].lim = v; paint(); }
+});
+$("#btn-yaml").addEventListener("click", () => {
+  $("#tx-title").textContent = "YAML で書き出す(Python 版でそのまま解けます)";
+  $("#tx-area").value = toYaml();
+  $("#tx-msg").textContent = "";
+  $("#dlg-text").showModal();
+});
+$("#tx-x").addEventListener("click", () => $("#dlg-text").close());
+$("#tx-copy").addEventListener("click", () => {
+  const ta = $("#tx-area"); ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  if (!ok && navigator.clipboard) { navigator.clipboard.writeText(ta.value).then(() => {}, () => {}); ok = true; }
+  $("#tx-msg").textContent = ok ? "コピーしました" : "選択して Ctrl+C でコピーしてください";
+});
+
+if (!restore()) model = PRESETS.fan();
+renderStack();
+</script>
