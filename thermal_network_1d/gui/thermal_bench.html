@@ -1,0 +1,1301 @@
+<title>熱回路ベンチ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#E9EDF1; --surface:#FFFFFF; --surface-2:#F4F6F8; --surface-3:#EDF1F4;
+  --line:#CBD4DC; --line-soft:#E1E7EC;
+  --ink:#0F1820; --ink-2:#495761; --ink-3:#7A8892;
+  --accent:#0F6E8C; --accent-2:#0B5468; --accent-soft:#DBEBF2;
+  --warn:#8C5410; --warn-bg:#FAEFDC; --warn-line:#E4C58F;
+  --t-cold:#3E7CB1; --t-mid:#EFE1BE; --t-hot:#B23A2E;
+  --edge:#78868F; --grid:#C9D2DA;
+  --shadow:0 1px 2px rgba(16,30,42,.08), 0 6px 18px rgba(16,30,42,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1418; --surface:#171F25; --surface-2:#1C252C; --surface-3:#212B33;
+    --line:#2E3A43; --line-soft:#242E36;
+    --ink:#E3EAF0; --ink-2:#A3B1BC; --ink-3:#71818D;
+    --accent:#4FB3D0; --accent-2:#7FCBE1; --accent-soft:#123744;
+    --warn:#E0A85C; --warn-bg:#2E2413; --warn-line:#5A4622;
+    --t-cold:#4C88BE; --t-mid:#C9B788; --t-hot:#C7503F;
+    --edge:#8B99A4; --grid:#2A343C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1418; --surface:#171F25; --surface-2:#1C252C; --surface-3:#212B33;
+  --line:#2E3A43; --line-soft:#242E36;
+  --ink:#E3EAF0; --ink-2:#A3B1BC; --ink-3:#71818D;
+  --accent:#4FB3D0; --accent-2:#7FCBE1; --accent-soft:#123744;
+  --warn:#E0A85C; --warn-bg:#2E2413; --warn-line:#5A4622;
+  --t-cold:#4C88BE; --t-mid:#C9B788; --t-hot:#C7503F;
+  --edge:#8B99A4; --grid:#2A343C;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif;
+  font-size:13px; line-height:1.5;
+}
+.num,input[type="number"],table{font-variant-numeric:tabular-nums}
+
+/* ---------- レイアウト ---------- */
+.app{height:100vh; display:grid; grid-template-rows:auto 1fr; overflow:hidden}
+.main{display:grid; grid-template-columns:minmax(0,1fr) 322px; min-height:0}
+
+/* ---------- ツールバー ---------- */
+.bar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px 14px; background:var(--surface); border-bottom:1px solid var(--line);
+}
+.brand{display:flex; align-items:baseline; gap:9px; margin-right:4px}
+.brand b{font-size:14px; font-weight:600; letter-spacing:.02em}
+.brand span{font-size:10.5px; color:var(--ink-3); letter-spacing:.09em; text-transform:uppercase}
+.sep{width:1px; height:20px; background:var(--line); flex:none}
+.spacer{flex:1}
+
+button, select{
+  font:inherit; color:var(--ink); background:var(--surface-2);
+  border:1px solid var(--line); border-radius:5px; padding:4px 10px; cursor:pointer;
+}
+button:hover, select:hover{background:var(--surface-3); border-color:var(--ink-3)}
+button:focus-visible, select:focus-visible, input:focus-visible{
+  outline:2px solid var(--accent); outline-offset:1px}
+button.primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:500}
+button.primary:hover{background:var(--accent-2); border-color:var(--accent-2)}
+button.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent)}
+button.ghost{background:transparent; border-color:transparent; color:var(--ink-2); padding:4px 7px}
+button.ghost:hover{background:var(--surface-3); border-color:var(--line)}
+button:disabled{opacity:.45; cursor:default}
+kbd{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10.5px;
+  background:var(--surface-3); border:1px solid var(--line); border-bottom-width:2px;
+  border-radius:4px; padding:0 4px; color:var(--ink-2);
+}
+
+/* ---------- キャンバス ---------- */
+.stage{position:relative; min-width:0; background:var(--ground)}
+svg#board{width:100%; height:100%; display:block; touch-action:none; cursor:grab}
+svg#board.panning{cursor:grabbing}
+svg#board.linking{cursor:crosshair}
+
+.node-box{fill:var(--surface); stroke:var(--line); stroke-width:1.5}
+.node-name{font-size:11.5px; font-weight:500; text-anchor:middle; pointer-events:none}
+.node-temp{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:16px; font-weight:600;
+  text-anchor:middle; pointer-events:none}
+.node-unit{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:9.5px;
+  text-anchor:middle; pointer-events:none; opacity:.65}
+.node g.body{cursor:move}
+.node.sel .node-box{stroke:var(--accent); stroke-width:2.5}
+.chip{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px; pointer-events:none}
+.chip-bg{stroke-width:1}
+.chip-q{fill:var(--warn-bg); stroke:var(--warn-line)}
+.chip-q-t{fill:var(--warn)}
+.chip-f{fill:var(--accent-soft); stroke:var(--accent)}
+.chip-f-t{fill:var(--accent)}
+.port{fill:var(--surface); stroke:var(--accent); stroke-width:1.5; cursor:crosshair}
+.port:hover{fill:var(--accent)}
+.port-plus{stroke:var(--accent); stroke-width:1.4; pointer-events:none}
+.port:hover + .port-plus{stroke:#fff}
+
+.wire{fill:none; stroke:var(--edge); stroke-linecap:round}
+.wire.flowing{stroke-dasharray:9 7; animation:flow 1.1s linear infinite}
+.wire.flowing.rev{animation-direction:reverse}
+@keyframes flow{to{stroke-dashoffset:-16}}
+@media (prefers-reduced-motion: reduce){ .wire.flowing{animation:none} }
+.wire-hit{fill:none; stroke:transparent; stroke-width:20; cursor:pointer}
+.edge.sel .wire{stroke:var(--accent)}
+.edge-label{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10.5px;
+  text-anchor:middle; fill:var(--ink-2); pointer-events:none}
+.edge-label-bg{fill:var(--ground); stroke:none; opacity:.85; pointer-events:none}
+.arrow{stroke:none}
+.ghost-wire{fill:none; stroke:var(--accent); stroke-width:2; stroke-dasharray:5 5; pointer-events:none}
+
+/* ---------- 凡例 ---------- */
+.legend{
+  position:absolute; left:14px; bottom:14px; background:var(--surface); border:1px solid var(--line);
+  border-radius:7px; padding:9px 11px; box-shadow:var(--shadow); width:186px;
+}
+.legend .lg-title{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3)}
+.ramp{height:9px; border-radius:2px; margin:6px 0 3px;
+  background:linear-gradient(90deg,var(--t-cold),var(--t-mid),var(--t-hot))}
+.ramp-lab{display:flex; justify-content:space-between; font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px; color:var(--ink-2)}
+.legend p{margin:7px 0 0; font-size:10.5px; color:var(--ink-3); line-height:1.45}
+
+.hud{
+  position:absolute; left:14px; top:14px; display:flex; gap:6px; align-items:center;
+  background:var(--surface); border:1px solid var(--line); border-radius:7px;
+  padding:4px 6px; box-shadow:var(--shadow);
+}
+.hud .zoom{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px;
+  color:var(--ink-3); min-width:42px; text-align:center}
+.tip{
+  position:absolute; right:14px; top:14px; max-width:270px;
+  background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent);
+  border-radius:6px; padding:8px 11px; box-shadow:var(--shadow); font-size:11.5px; color:var(--ink-2);
+}
+
+/* ---------- 右レール ---------- */
+.rail{
+  background:var(--surface); border-left:1px solid var(--line);
+  display:flex; flex-direction:column; min-height:0; overflow:hidden;
+}
+.rail-scroll{overflow-y:auto; overflow-x:hidden; padding-bottom:20px}
+.sec{border-bottom:1px solid var(--line-soft); padding:12px 14px}
+.sec-h{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:9px;
+}
+.sec-h h2{margin:0; font-size:10.5px; font-weight:600; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3)}
+.kindtag{
+  font-size:10px; padding:1px 7px; border-radius:99px; letter-spacing:.04em;
+  background:var(--surface-3); color:var(--ink-2); border:1px solid var(--line);
+}
+
+.f{display:grid; grid-template-columns:74px minmax(0,1fr); align-items:center; gap:8px; margin-bottom:7px}
+.f > label{font-size:11.5px; color:var(--ink-2)}
+.f .inwrap{display:flex; align-items:center; gap:6px; min-width:0}
+input[type="text"], input[type="number"]{
+  font:inherit; width:100%; min-width:0; padding:4px 7px; color:var(--ink);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:5px;
+}
+input[type="number"]{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px}
+input.bad{border-color:var(--t-hot); background:color-mix(in srgb,var(--t-hot) 8%, var(--surface-2))}
+.unit{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; color:var(--ink-3);
+  width:34px; flex:none}
+.check{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-2)}
+.check input{accent-color:var(--accent)}
+.hintline{font-size:11px; color:var(--ink-3); margin:2px 0 0}
+.empty{font-size:11.5px; color:var(--ink-3); line-height:1.6}
+.empty b{color:var(--ink-2); font-weight:500}
+
+details.calc{margin-top:8px; border-top:1px dashed var(--line); padding-top:8px}
+details.calc summary{font-size:11px; color:var(--accent); cursor:pointer; list-style:none}
+details.calc summary::-webkit-details-marker{display:none}
+details.calc summary::before{content:"▸ "; }
+details.calc[open] summary::before{content:"▾ "; }
+.calc-row{display:flex; align-items:center; gap:5px; margin-top:7px}
+.calc-row input{padding:3px 5px; font-size:11.5px; flex:1; min-width:0}
+.calc-row button{flex:none; padding:3px 7px; font-size:11px}
+.calc-row .cl{flex:none; width:30px; font-size:10.5px; color:var(--ink-3);
+  font-family:"IBM Plex Mono",ui-monospace,monospace}
+.calc-cap{font-size:10px; color:var(--ink-3); margin-top:4px}
+
+table.res{width:100%; border-collapse:collapse; font-size:11.5px; table-layout:fixed}
+table.res th{
+  font-size:9.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-3); text-align:right; padding:0 0 4px; border-bottom:1px solid var(--line);
+}
+table.res th:first-child{text-align:left}
+table.res td{padding:3px 0; border-bottom:1px solid var(--line-soft); text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; height:23px}
+table.res td:first-child{
+  text-align:left; font-family:"IBM Plex Sans JP",sans-serif;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+table.res tr.rowsel td{background:var(--accent-soft)}
+table.res tbody tr{cursor:pointer}
+.swatch{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px;
+  vertical-align:middle; border:1px solid rgba(0,0,0,.15)}
+
+dl.bal{display:grid; grid-template-columns:1fr auto; gap:3px 10px; margin:0; font-size:11.5px}
+dl.bal dt{color:var(--ink-2)}
+dl.bal dd{margin:0; text-align:right; font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+.warns{margin:0; padding:0; list-style:none; display:grid; gap:5px}
+.warns li{
+  background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn);
+  border-radius:5px; padding:5px 8px; font-size:11px; line-height:1.45;
+}
+
+dialog{
+  border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink);
+  padding:0; width:min(660px,92vw); box-shadow:var(--shadow);
+}
+dialog::backdrop{background:rgba(8,14,20,.45)}
+.dlg-h{display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:11px 14px; border-bottom:1px solid var(--line)}
+.dlg-h h3{margin:0; font-size:13px; font-weight:600}
+.dlg-b{padding:12px 14px}
+textarea{
+  width:100%; height:330px; resize:vertical; font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px; line-height:1.55; color:var(--ink); background:var(--surface-2);
+  border:1px solid var(--line); border-radius:6px; padding:9px; white-space:pre;
+}
+.dlg-f{display:flex; gap:8px; align-items:center; padding:0 14px 13px}
+.dlg-f .msg{font-size:11.5px; color:var(--ink-3)}
+
+@media (max-width:860px){
+  .app{height:auto; overflow:visible}
+  .main{grid-template-columns:1fr; grid-template-rows:520px auto}
+  .rail{border-left:none; border-top:1px solid var(--line)}
+}
+</style>
+
+<div class="app">
+  <div class="bar">
+    <div class="brand"><b>熱回路ベンチ</b><span>1D thermal network</span></div>
+    <div class="sep"></div>
+    <button id="btn-add" class="primary">＋ ノード</button>
+    <button id="btn-link">つなぐ</button>
+    <button id="btn-del" class="ghost">削除</button>
+    <div class="sep"></div>
+    <button id="btn-fit" class="ghost">全体表示</button>
+    <button id="btn-tidy" class="ghost">整列</button>
+    <div class="spacer"></div>
+    <select id="preset">
+      <option value="">例題を読み込む…</option>
+      <option value="cpu">空冷CPU(直列4ノード)</option>
+      <option value="wall">壁(両端温度固定)</option>
+      <option value="parallel">並列2経路</option>
+      <option value="blank">白紙</option>
+    </select>
+    <button id="btn-yaml" class="ghost">YAML</button>
+    <button id="btn-json" class="ghost">JSON</button>
+  </div>
+
+  <div class="main">
+    <div class="stage">
+      <svg id="board">
+        <defs>
+          <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="var(--grid)"></circle>
+          </pattern>
+        </defs>
+        <rect id="bg" x="0" y="0" width="100%" height="100%" fill="url(#dots)"></rect>
+        <g id="world">
+          <g id="wires"></g>
+          <g id="nodes"></g>
+          <path id="ghost" class="ghost-wire" visibility="hidden"></path>
+        </g>
+      </svg>
+
+      <div class="hud">
+        <button id="zoom-out" class="ghost" title="縮小">−</button>
+        <span class="zoom" id="zoom-val">100%</span>
+        <button id="zoom-in" class="ghost" title="拡大">＋</button>
+      </div>
+
+      <div class="tip" id="tip" title="クリックで閉じる">
+        <b>ノード</b>をドラッグで移動、右端の <b>＋</b> を別のノードへドラッグすると
+        <b>熱抵抗</b>でつながります。空白をダブルクリックでノード追加。
+      </div>
+
+      <div class="legend">
+        <div class="lg-title">温度</div>
+        <div class="ramp"></div>
+        <div class="ramp-lab"><span id="lg-lo">—</span><span id="lg-hi">—</span></div>
+        <p>枝の太さ＝熱流の大きさ／流れる破線＝熱の向き</p>
+      </div>
+    </div>
+
+    <aside class="rail">
+      <div class="rail-scroll">
+        <div class="sec">
+          <div class="sec-h"><h2>選択中</h2><span class="kindtag" id="kindtag">なし</span></div>
+          <div id="inspector"></div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h2>温度</h2><span class="kindtag" id="ncount">0 ノード</span></div>
+          <table class="res"><thead><tr>
+            <th style="width:52%">ノード</th><th style="width:24%">T [degC]</th><th style="width:24%">Q [W]</th>
+          </tr></thead><tbody id="tbody-nodes"></tbody></table>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h2>枝の熱流</h2><span class="kindtag" id="ecount">0 枝</span></div>
+          <table class="res"><thead><tr>
+            <th style="width:44%">枝</th><th style="width:28%">R [K/W]</th><th style="width:28%">Q [W]</th>
+          </tr></thead><tbody id="tbody-edges"></tbody></table>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h2>検算</h2></div>
+          <dl class="bal">
+            <dt>発熱の合計</dt><dd id="bal-in">—</dd>
+            <dt>温度固定ノードへの流出</dt><dd id="bal-out">—</dd>
+            <dt>収支の残差</dt><dd id="bal-res">—</dd>
+          </dl>
+        </div>
+        <div class="sec" id="warn-sec" hidden>
+          <div class="sec-h"><h2>注意</h2></div>
+          <ul class="warns" id="warns"></ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-h">
+    <h3 id="dlg-title">書き出し</h3>
+    <button class="ghost" id="dlg-x">閉じる</button>
+  </div>
+  <div class="dlg-b"><textarea id="dlg-text" spellcheck="false"></textarea></div>
+  <div class="dlg-f">
+    <button id="dlg-copy" class="primary">コピー</button>
+    <button id="dlg-load" hidden>この内容を読み込む</button>
+    <span class="msg" id="dlg-msg"></span>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+/* =====================================================================
+   熱回路ベンチ --- 要素は 4 つだけ
+     ノード      : 温度が決まる点
+     エッジ      : ノード間の熱抵抗 R [K/W]
+     発熱        : ノードに入る熱 Q [W]         (電流源)
+     温度固定    : ノードの温度を決める境界      (電圧源)
+   節点法:  Σ_j (Ti - Tj)/Rij = Qi ,  固定ノードは Ti = Tf
+   ===================================================================== */
+
+const NODE_W = 132, NODE_H = 52, STORE = "thermal-bench-v1";
+
+let model = { seq: 1, nodes: [], edges: [] };
+let sel = null;              // {kind:"node"|"edge", id}
+let view = { x: 0, y: 0, k: 1 };
+let sol = null;              // 直近の解
+let linkFrom = null;         // 配線中の始点ノード id
+let builtKey = "";           // インスペクタが今どの選択で組まれているか
+
+const $ = s => document.querySelector(s);
+const SVGNS = "http://www.w3.org/2000/svg";
+const board = $("#board"), world = $("#world"),
+      gWires = $("#wires"), gNodes = $("#nodes"), ghost = $("#ghost");
+
+const nodeOf = id => model.nodes.find(n => n.id === id);
+const edgeOf = id => model.edges.find(e => e.id === id);
+const uid = p => p + (model.seq++);
+
+function fmt(v, d) {
+  if (!Number.isFinite(v)) return "—";
+  const a = Math.abs(v);
+  if (a !== 0 && (a < 1e-3 || a >= 1e5)) return v.toExponential(1);
+  return v.toFixed(d === undefined ? (a < 10 ? 2 : 1) : d);
+}
+const fmtIn = v => Number.isFinite(v) ? String(+v.toPrecision(12)) : "";
+
+/* =====================================================================
+   1. ソルバ
+   ===================================================================== */
+function gauss(A, b) {
+  const n = b.length;
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    if (Math.abs(A[p][c]) < 1e-14) return null;
+    if (p !== c) { [A[p], A[c]] = [A[c], A[p]]; [b[p], b[c]] = [b[c], b[p]]; }
+    for (let r = c + 1; r < n; r++) {
+      const f = A[r][c] / A[c][c];
+      if (f === 0) continue;
+      for (let k = c; k < n; k++) A[r][k] -= f * A[c][k];
+      b[r] -= f * b[c];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let r = n - 1; r >= 0; r--) {
+    let s = b[r];
+    for (let k = r + 1; k < n; k++) s -= A[r][k] * x[k];
+    x[r] = s / A[r][r];
+  }
+  return x;
+}
+
+function solve() {
+  const warnings = [], T = {}, flows = {};
+  const nodes = model.nodes, n = nodes.length;
+  const idx = {}; nodes.forEach((nd, i) => { idx[nd.id] = i; });
+
+  const live = model.edges.filter(e => {
+    if (e.a === e.b || !idx.hasOwnProperty(e.a) || !idx.hasOwnProperty(e.b)) return false;
+    if (!(e.r > 0) || !Number.isFinite(e.r)) return false;
+    return true;
+  });
+  const dead = model.edges.length - live.length;
+  if (dead > 0) warnings.push(`熱抵抗が 0 以下または未入力の枝が ${dead} 本あります。計算から外しました(断熱扱い)。`);
+
+  const fixed = nodes.filter(nd => nd.fixed);
+  if (n === 0) return { ok: false, T, flows, warnings, empty: true };
+  if (fixed.length === 0) {
+    warnings.push("温度を固定したノードがありません。熱の逃げ先を 1 つ以上作ってください。");
+    return { ok: false, T, flows, warnings };
+  }
+
+  /* 浮きノード検出 (固定ノードから到達できるか) */
+  const adj = {}; nodes.forEach(nd => { adj[nd.id] = []; });
+  live.forEach(e => { adj[e.a].push(e.b); adj[e.b].push(e.a); });
+  const seen = new Set(); const queue = fixed.map(f => f.id);
+  queue.forEach(id => seen.add(id));
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const nb of adj[cur]) if (!seen.has(nb)) { seen.add(nb); queue.push(nb); }
+  }
+  const floating = nodes.filter(nd => !seen.has(nd.id));
+  if (floating.length) {
+    warnings.push("温度固定ノードにつながっていないノードがあります: " +
+      floating.map(f => f.name).join("、"));
+    return { ok: false, T, flows, warnings, floating: floating.map(f => f.id) };
+  }
+
+  const A = Array.from({ length: n }, () => new Array(n).fill(0));
+  const b = new Array(n).fill(0);
+  nodes.forEach((nd, i) => { b[i] = nd.fixed ? 0 : (Number(nd.q) || 0); });
+  for (const e of live) {
+    const i = idx[e.a], j = idx[e.b], g = 1 / e.r;
+    A[i][i] += g; A[j][j] += g; A[i][j] -= g; A[j][i] -= g;
+  }
+  nodes.forEach((nd, i) => {
+    if (!nd.fixed) return;
+    A[i].fill(0); A[i][i] = 1; b[i] = Number(nd.tf) || 0;
+  });
+
+  const x = gauss(A.map(r => r.slice()), b.slice());
+  if (!x) { warnings.push("方程式が解けませんでした。回路の接続を見直してください。"); 
+            return { ok: false, T, flows, warnings }; }
+  nodes.forEach((nd, i) => { T[nd.id] = x[i]; });
+
+  for (const e of model.edges) {
+    flows[e.id] = (e.r > 0 && Number.isFinite(e.r) && T[e.a] !== undefined && T[e.b] !== undefined)
+      ? (T[e.a] - T[e.b]) / e.r : 0;
+  }
+
+  /* 検算: 自由ノードの収支残差 と 全体のエネルギー収支 */
+  let residual = 0, inject = 0;
+  nodes.forEach(nd => {
+    let net = 0;                                    // このノードから外へ出る熱
+    for (const e of live) {
+      if (e.a === nd.id) net += flows[e.id];
+      else if (e.b === nd.id) net -= flows[e.id];
+    }
+    if (nd.fixed) inject += net;                    // 固定ノードが供給した熱
+    else residual = Math.max(residual, Math.abs((Number(nd.q) || 0) - net));
+  });
+  const heat = nodes.reduce((s, nd) => s + (nd.fixed ? 0 : (Number(nd.q) || 0)), 0);
+
+  const hotSource = nodes.some(nd => !nd.fixed && (Number(nd.q) || 0) > 0);
+  if (!hotSource && fixed.length < 2)
+    warnings.push("発熱も温度差もありません。どこかに発熱 Q を入れるか、固定温度をもう 1 つ作ってください。");
+
+  return { ok: true, T, flows, warnings, residual, heat, inject };
+}
+
+/* =====================================================================
+   2. 色
+   ===================================================================== */
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hexToRgb(h) {
+  h = h.replace("#", "");
+  if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
+function tempColor(t, lo, hi) {
+  const cold = hexToRgb(cssVar("--t-cold")), mid = hexToRgb(cssVar("--t-mid")), hot = hexToRgb(cssVar("--t-hot"));
+  let f = (hi - lo) < 1e-9 ? 0.5 : (t - lo) / (hi - lo);
+  f = Math.max(0, Math.min(1, f));
+  const c = f < 0.5 ? mix(cold, mid, f * 2) : mix(mid, hot, (f - 0.5) * 2);
+  return { css: `rgb(${c[0]},${c[1]},${c[2]})`, dark: (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) < 150 };
+}
+
+/* =====================================================================
+   3. 描画 --- 構造の作り直し(rebuild)と値の更新(paint)を分ける
+      数値を打っている最中は paint しか走らないので、画面は動かない
+   ===================================================================== */
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const nodeEls = new Map(), edgeEls = new Map();
+
+function rebuild() {
+  gNodes.textContent = ""; gWires.textContent = "";
+  nodeEls.clear(); edgeEls.clear();
+
+  for (const e of model.edges) {
+    const g = el("g", { class: "edge" }, gWires);
+    const hit = el("path", { class: "wire-hit" }, g);
+    const wire = el("path", { class: "wire" }, g);
+    const arrow = el("path", { class: "arrow", d: "M -5 -4 L 5 0 L -5 4 Z" }, g);
+    const lbg = el("rect", { class: "edge-label-bg", rx: 3, height: 13 }, g);
+    const lab = el("text", { class: "edge-label" }, g);
+    hit.addEventListener("pointerdown", ev => { ev.stopPropagation(); select("edge", e.id); });
+    edgeEls.set(e.id, { g, hit, wire, arrow, lbg, lab });
+  }
+
+  for (const nd of model.nodes) {
+    const g = el("g", { class: "node" }, gNodes);
+    const body = el("g", { class: "body" }, g);
+    const box = el("rect", { class: "node-box", x: -NODE_W / 2, y: -NODE_H / 2,
+                             width: NODE_W, height: NODE_H, rx: 7 }, body);
+    const name = el("text", { class: "node-name", y: -6 }, body);
+    const temp = el("text", { class: "node-temp", y: 16 }, body);
+    const tval = el("tspan", {}, temp);
+    const tunit = el("tspan", { class: "node-unit", dx: 3 }, temp);
+    tunit.textContent = "degC";
+
+    const qg = el("g", { class: "chip-g" }, g);
+    const qbg = el("rect", { class: "chip-bg chip-q", rx: 3, height: 14, y: -NODE_H / 2 - 18 }, qg);
+    const qt = el("text", { class: "chip chip-q-t", y: -NODE_H / 2 - 7.5 }, qg);
+    const fg = el("g", { class: "chip-g" }, g);
+    const fbg = el("rect", { class: "chip-bg chip-f", rx: 3, height: 14, y: -NODE_H / 2 - 18 }, fg);
+    const ft = el("text", { class: "chip chip-f-t", y: -NODE_H / 2 - 7.5 }, fg);
+
+    const PY0 = -NODE_H / 2 + 13;
+    const port = el("circle", { class: "port", cx: NODE_W / 2, cy: PY0, r: 8.5 }, g);
+    el("path", { class: "port-plus",
+                 d: `M ${NODE_W / 2 - 4} ${PY0} H ${NODE_W / 2 + 4} ` +
+                    `M ${NODE_W / 2} ${PY0 - 4} V ${PY0 + 4}` }, g);
+
+    body.addEventListener("pointerdown", ev => startNodeDrag(ev, nd));
+    port.addEventListener("pointerdown", ev => startLink(ev, nd));
+    nodeEls.set(nd.id, { g, body, box, name, tval, tunit, qg, qbg, qt, fg, fbg, ft });
+  }
+
+  buildTables();
+  layout();
+  paint();
+}
+
+function layout() {
+  for (const nd of model.nodes) {
+    const r = nodeEls.get(nd.id); if (!r) continue;
+    r.g.setAttribute("transform", `translate(${nd.x},${nd.y})`);
+  }
+  /* 同じ 2 点を結ぶ枝は膨らませて重ならないようにする */
+  const seen = {};
+  const count = {};
+  model.edges.forEach(e => { const k = key2(e); count[k] = (count[k] || 0) + 1; });
+  for (const e of model.edges) {
+    const r = edgeEls.get(e.id); if (!r) continue;
+    const a = nodeOf(e.a), b = nodeOf(e.b);
+    if (!a || !b) { r.g.setAttribute("visibility", "hidden"); continue; }
+    r.g.removeAttribute("visibility");
+    const k = key2(e); seen[k] = (seen[k] || 0) + 1;
+    const off = (seen[k] - 1 - (count[k] - 1) / 2) * 34;
+    const geo = wireGeom(a, b, off);
+    r.g.__geo = geo;
+    r.wire.setAttribute("d", geo.d); r.hit.setAttribute("d", geo.d);
+    placeDecor(r);
+  }
+}
+/* 矢印と熱流ラベルを枝の中点に置く */
+function placeDecor(r) {
+  const geo = r.g.__geo; if (!geo) return;
+  r.arrow.setAttribute("transform",
+    `translate(${geo.at.x},${geo.at.y}) rotate(${geo.ang + (r.g.__neg ? 180 : 0)})`);
+  r.lab.setAttribute("x", geo.lab.x); r.lab.setAttribute("y", geo.lab.y + 3.5);
+  const w = (r.lab.textContent.length || 1) * 6.2 + 6;
+  r.lbg.setAttribute("x", geo.lab.x - w / 2);
+  r.lbg.setAttribute("y", geo.lab.y - 6.5);
+  r.lbg.setAttribute("width", w);
+}
+const key2 = e => [e.a, e.b].sort().join("|");
+
+function wireGeom(a, b, off) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len, ny = dx / len;
+  const mid = { x: (a.x + b.x) / 2 + nx * off, y: (a.y + b.y) / 2 + ny * off };
+  const p1 = border(a, mid), p2 = border(b, mid);
+  const c = { x: 2 * mid.x - (p1.x + p2.x) / 2, y: 2 * mid.y - (p1.y + p2.y) / 2 };
+  const at = { x: 0.25 * p1.x + 0.5 * c.x + 0.25 * p2.x, y: 0.25 * p1.y + 0.5 * c.y + 0.25 * p2.y };
+  const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+  const lnx = -(p2.y - p1.y) / (Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1);
+  const lny = (p2.x - p1.x) / (Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1);
+  return { d: `M ${p1.x} ${p1.y} Q ${c.x} ${c.y} ${p2.x} ${p2.y}`,
+           at, ang, lab: { x: at.x + lnx * 15, y: at.y + lny * 15 } };
+}
+function border(n, toward) {
+  const dx = toward.x - n.x, dy = toward.y - n.y;
+  if (!dx && !dy) return { x: n.x, y: n.y };
+  const hw = NODE_W / 2 + 3, hh = NODE_H / 2 + 3;
+  const s = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+  return { x: n.x + dx * s, y: n.y + dy * s };
+}
+
+function paint() {
+  sol = solve();
+  const T = sol.T, F = sol.flows;
+  const ts = model.nodes.map(n => T[n.id]).filter(Number.isFinite);
+  const lo = ts.length ? Math.min(...ts) : 0, hi = ts.length ? Math.max(...ts) : 1;
+  $("#lg-lo").textContent = ts.length ? fmt(lo, 1) : "—";
+  $("#lg-hi").textContent = ts.length ? fmt(hi, 1) : "—";
+
+  for (const nd of model.nodes) {
+    const r = nodeEls.get(nd.id); if (!r) continue;
+    const t = T[nd.id];
+    const col = Number.isFinite(t) ? tempColor(t, lo, hi) : null;
+    r.box.style.fill = col ? col.css : "";
+    const ink = col ? (col.dark ? "#FFFFFF" : "#0F1820") : "var(--ink)";
+    r.name.style.fill = ink; r.tval.style.fill = ink; r.tunit.style.fill = ink;
+    r.name.textContent = clip(nd.name, 15);
+    r.tval.textContent = Number.isFinite(t) ? fmt(t, Math.abs(t) < 100 ? 2 : 1) : "—";
+    r.tunit.textContent = Number.isFinite(t) ? "degC" : "";
+
+    const q = Number(nd.q) || 0;
+    const showQ = !nd.fixed && q !== 0;
+    r.qg.setAttribute("visibility", showQ ? "visible" : "hidden");
+    if (showQ) { chip(r.qbg, r.qt, `Q ${fmt(q)} W`, -NODE_W / 2, "left"); }
+    r.fg.setAttribute("visibility", nd.fixed ? "visible" : "hidden");
+    if (nd.fixed) { chip(r.fbg, r.ft, `固定 ${fmt(Number(nd.tf) || 0, 1)}`, NODE_W / 2, "right"); }
+    r.g.classList.toggle("sel", !!sel && sel.kind === "node" && sel.id === nd.id);
+  }
+
+  const maxQ = Math.max(1e-12, ...model.edges.map(e => Math.abs(F[e.id] || 0)));
+  for (const e of model.edges) {
+    const r = edgeEls.get(e.id); if (!r) continue;
+    const q = F[e.id] || 0, mag = Math.abs(q);
+    r.wire.setAttribute("stroke-width", (1.6 + 6 * Math.sqrt(mag / maxQ)).toFixed(2));
+    const moving = mag / maxQ > 0.02;
+    r.wire.classList.toggle("flowing", moving);
+    r.wire.classList.toggle("rev", q < 0);
+    if (moving) r.wire.style.animationDuration =
+      Math.max(0.45, 2.2 - 1.8 * Math.sqrt(mag / maxQ)).toFixed(2) + "s";
+    r.g.__neg = q < 0;
+    r.arrow.setAttribute("visibility", moving ? "visible" : "hidden");
+    r.arrow.style.fill = "var(--edge)";
+    r.lab.textContent = `${fmt(mag)} W`;
+    placeDecor(r);
+    r.g.classList.toggle("sel", !!sel && sel.kind === "edge" && sel.id === e.id);
+  }
+
+  paintTables();
+  paintInspectorReadouts();
+  paintWarnings();
+  save();
+}
+const clip = (s, n) => (s || "").length > n ? (s || "").slice(0, n - 1) + "…" : (s || "");
+function chip(bg, txt, text, anchorX, side) {
+  txt.textContent = text;
+  const w = text.length * 6.6 + 10;
+  const x = side === "left" ? anchorX : anchorX - w;
+  bg.setAttribute("x", x); bg.setAttribute("width", w);
+  txt.setAttribute("x", x + 5);
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   4. 右レールの表 --- 行は「追加順」で固定する。
+      値で並べ替えると入力中に行が飛んで読めなくなるため。
+   ===================================================================== */
+const rowEls = { nodes: new Map(), edges: new Map() };
+
+function buildTables() {
+  const tn = $("#tbody-nodes"), te = $("#tbody-edges");
+  tn.textContent = ""; te.textContent = "";
+  rowEls.nodes.clear(); rowEls.edges.clear();
+
+  for (const nd of model.nodes) {
+    const tr = document.createElement("tr");
+    const c0 = document.createElement("td"), c1 = document.createElement("td"), c2 = document.createElement("td");
+    const sw = document.createElement("span"); sw.className = "swatch";
+    const nm = document.createElement("span");
+    c0.append(sw, nm); tr.append(c0, c1, c2); tn.appendChild(tr);
+    tr.addEventListener("click", () => select("node", nd.id));
+    rowEls.nodes.set(nd.id, { tr, sw, nm, t: c1, q: c2 });
+  }
+  for (const e of model.edges) {
+    const tr = document.createElement("tr");
+    const c0 = document.createElement("td"), c1 = document.createElement("td"), c2 = document.createElement("td");
+    tr.append(c0, c1, c2); te.appendChild(tr);
+    tr.addEventListener("click", () => select("edge", e.id));
+    rowEls.edges.set(e.id, { tr, nm: c0, r: c1, q: c2 });
+  }
+  $("#ncount").textContent = model.nodes.length + " ノード";
+  $("#ecount").textContent = model.edges.length + " 枝";
+}
+
+function paintTables() {
+  const T = sol.T, F = sol.flows;
+  const ts = model.nodes.map(n => T[n.id]).filter(Number.isFinite);
+  const lo = ts.length ? Math.min(...ts) : 0, hi = ts.length ? Math.max(...ts) : 1;
+  for (const nd of model.nodes) {
+    const r = rowEls.nodes.get(nd.id); if (!r) continue;
+    const t = T[nd.id];
+    r.sw.style.background = Number.isFinite(t) ? tempColor(t, lo, hi).css : "transparent";
+    r.nm.textContent = nd.name;
+    r.t.textContent = Number.isFinite(t) ? fmt(t) : "—";
+    r.q.textContent = nd.fixed ? "固定" : (Number(nd.q) ? fmt(Number(nd.q)) : "");
+    r.tr.classList.toggle("rowsel", !!sel && sel.kind === "node" && sel.id === nd.id);
+  }
+  for (const e of model.edges) {
+    const r = rowEls.edges.get(e.id); if (!r) continue;
+    r.nm.textContent = edgeName(e);
+    r.r.textContent = Number.isFinite(e.r) ? fmt(e.r, 4) : "—";
+    r.q.textContent = Number.isFinite(F[e.id]) ? fmt(F[e.id]) : "—";
+    r.tr.classList.toggle("rowsel", !!sel && sel.kind === "edge" && sel.id === e.id);
+  }
+  $("#bal-in").textContent = sol.ok ? fmt(sol.heat) + " W" : "—";
+  $("#bal-out").textContent = sol.ok ? fmt(-sol.inject) + " W" : "—";
+  $("#bal-res").textContent = sol.ok ? sol.residual.toExponential(1) + " W" : "—";
+}
+function edgeName(e) {
+  const a = nodeOf(e.a), b = nodeOf(e.b);
+  return clip(a ? a.name : "?", 8) + " → " + clip(b ? b.name : "?", 8);
+}
+function paintWarnings() {
+  const box = $("#warns"), sec = $("#warn-sec");
+  const list = sol.warnings || [];
+  const joined = list.join("");
+  if (box.dataset.sig === joined) return;
+  box.dataset.sig = joined;
+  box.textContent = "";
+  for (const w of list) { const li = document.createElement("li"); li.textContent = w; box.appendChild(li); }
+  sec.hidden = list.length === 0;
+}
+
+/* =====================================================================
+   5. インスペクタ --- 選択が変わったときだけ組み直す。
+      入力中に DOM を作り直さないので、カーソルも値も飛ばない。
+   ===================================================================== */
+function h(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function field(label, unit, input) {
+  const row = h("div", "f");
+  row.appendChild(h("label", null, label));
+  const wrap = h("div", "inwrap");
+  wrap.appendChild(input);
+  wrap.appendChild(h("span", "unit", unit || ""));
+  row.appendChild(wrap);
+  return row;
+}
+function numBox(get, set, step) {
+  const i = document.createElement("input");
+  i.type = "number"; i.step = step || "any"; i.value = fmtIn(get());
+  i.addEventListener("input", () => {
+    const v = parseFloat(i.value);
+    if (Number.isFinite(v)) { i.classList.remove("bad"); set(v); paint(); }
+    else i.classList.add("bad");
+  });
+  i.addEventListener("blur", () => { i.value = fmtIn(get()); i.classList.remove("bad"); });
+  return i;
+}
+function textBox(get, set) {
+  const i = document.createElement("input");
+  i.type = "text"; i.value = get();
+  i.addEventListener("input", () => { set(i.value); paint(); });
+  return i;
+}
+
+function buildInspector(force) {
+  const key = sel ? sel.kind + ":" + sel.id : "none";
+  if (key === builtKey && !force) return;
+  builtKey = key;
+  const box = $("#inspector"); box.textContent = "";
+  const tag = $("#kindtag");
+
+  if (!sel) {
+    tag.textContent = "なし";
+    const p = h("div", "empty");
+    p.innerHTML = "ノードか枝をクリックすると、ここで値を編集できます。<br><br>" +
+      "<b>＋ ノード</b> で点を足し、ノード右端の <b>＋</b> を別のノードへドラッグすると" +
+      "<b>熱抵抗</b>でつながります。<br><br>" +
+      "ノードには <b>発熱 Q [W]</b> か <b>固定温度 [degC]</b> を、枝には <b>R [K/W]</b> を入れるだけです。";
+    box.appendChild(p);
+    return;
+  }
+
+  if (sel.kind === "node") {
+    const nd = nodeOf(sel.id);
+    if (!nd) { sel = null; builtKey = ""; return buildInspector(); }
+    tag.textContent = "ノード";
+    box.appendChild(field("名前", "", textBox(() => nd.name, v => { nd.name = v; })));
+
+    const qIn = numBox(() => Number(nd.q) || 0, v => { nd.q = v; });
+    const qRow = field("発熱 Q", "W", qIn);
+    box.appendChild(qRow);
+
+    const chk = document.createElement("input"); chk.type = "checkbox"; chk.checked = !!nd.fixed;
+    const lab = h("label", "check"); lab.appendChild(chk);
+    lab.appendChild(h("span", null, "温度を固定する(境界)"));
+    const chkRow = h("div", "f"); chkRow.appendChild(h("span"));
+    chkRow.appendChild(lab); box.appendChild(chkRow);
+
+    const tIn = numBox(() => Number(nd.tf) || 0, v => { nd.tf = v; });
+    const tRow = field("固定温度", "degC", tIn);
+    box.appendChild(tRow);
+    const applyFixed = () => {
+      nd.fixed = chk.checked;
+      tIn.disabled = !chk.checked;
+      qIn.disabled = chk.checked;
+      qRow.style.opacity = chk.checked ? .45 : 1;
+      tRow.style.opacity = chk.checked ? 1 : .45;
+    };
+    chk.addEventListener("change", () => { applyFixed(); paint(); });
+    applyFixed();
+
+    const ro = h("dl", "bal");
+    ro.append(h("dt", null, "計算温度"), h("dd", null, "—"));
+    ro.lastChild.id = "ro-temp";
+    box.appendChild(ro);
+
+  } else {
+    const e = edgeOf(sel.id);
+    if (!e) { sel = null; builtKey = ""; return buildInspector(); }
+    tag.textContent = "枝(熱抵抗)";
+    box.appendChild(h("p", "hintline", edgeName(e)));
+    box.appendChild(field("熱抵抗 R", "K/W", numBox(() => e.r, v => { e.r = v; })));
+
+    const ro = h("dl", "bal");
+    ro.append(h("dt", null, "温度差"), h("dd", null, "—"));
+    ro.lastChild.id = "ro-dt";
+    ro.append(h("dt", null, "熱流 Q"), h("dd", null, "—"));
+    ro.lastChild.id = "ro-q";
+    box.appendChild(ro);
+
+    const det = h("details", "calc");
+    det.appendChild(h("summary", null, "R を寸法から計算する"));
+    det.appendChild(calcRow("伝導", ["L [m]", "k [W/mK]", "A [m2]"], v => v[0] / (v[1] * v[2]), e));
+    det.appendChild(calcRow("対流", ["h [W/m2K]", "A [m2]"], v => 1 / (v[0] * v[1]), e));
+    det.appendChild(calcRow("流体", ["mdot [kg/s]", "cp [J/kgK]"], v => 1 / (v[0] * v[1]), e));
+    det.appendChild(h("p", "calc-cap",
+      "伝導 R=L/(kA)、対流 R=1/(hA)、流体の持ち去り R=1/(mdot cp)。押すと上の R に入ります。"));
+    box.appendChild(det);
+  }
+  paintInspectorReadouts();
+}
+
+function calcRow(label, phs, calcFn, e) {
+  const row = h("div", "calc-row");
+  row.appendChild(h("span", "cl", label));
+  const ins = phs.map(p => {
+    const i = document.createElement("input");
+    i.type = "number"; i.step = "any"; i.placeholder = p; i.title = p;
+    return i;
+  });
+  ins.forEach(i => row.appendChild(i));
+  const btn = h("button", null, "R へ");
+  btn.addEventListener("click", () => {
+    const v = ins.map(i => parseFloat(i.value));
+    if (v.some(x => !Number.isFinite(x) || x === 0)) {
+      btn.textContent = "値が必要";
+      setTimeout(() => { btn.textContent = "R へ"; }, 1200);
+      return;
+    }
+    const r = calcFn(v);
+    if (!Number.isFinite(r) || r <= 0) return;
+    e.r = r;
+    builtKey = ""; buildInspector(); paint();
+  });
+  row.appendChild(btn);
+  return row;
+}
+
+function paintInspectorReadouts() {
+  if (!sel || !sol) return;
+  if (sel.kind === "node") {
+    const d = document.getElementById("ro-temp"); if (!d) return;
+    const t = sol.T[sel.id];
+    d.textContent = Number.isFinite(t) ? fmt(t) + " degC" : "—";
+  } else {
+    const e = edgeOf(sel.id); if (!e) return;
+    const dd = document.getElementById("ro-dt"), dq = document.getElementById("ro-q");
+    if (!dd || !dq) return;
+    const ta = sol.T[e.a], tb = sol.T[e.b], q = sol.flows[e.id];
+    dd.textContent = (Number.isFinite(ta) && Number.isFinite(tb)) ? fmt(ta - tb) + " K" : "—";
+    dq.textContent = Number.isFinite(q) ? fmt(q) + " W" : "—";
+  }
+}
+
+/* =====================================================================
+   6. 操作
+   ===================================================================== */
+function select(kind, id) {
+  sel = (kind && id) ? { kind, id } : null;
+  cancelLink();
+  buildInspector();
+  paint();
+}
+function structureChanged() { buildInspector(true); rebuild(); }
+
+function addNode(x, y) {
+  const nd = { id: uid("n"), name: "ノード" + (model.nodes.length + 1), x: Math.round(x), y: Math.round(y),
+               q: 0, fixed: false, tf: 25 };
+  model.nodes.push(nd);
+  sel = { kind: "node", id: nd.id };
+  structureChanged();
+}
+function addEdge(a, b) {
+  if (a === b) return;
+  const e = { id: uid("e"), a, b, r: 0.5 };
+  model.edges.push(e);
+  sel = { kind: "edge", id: e.id };
+  structureChanged();
+}
+function deleteSelected() {
+  if (!sel) return;
+  if (sel.kind === "node") {
+    model.nodes = model.nodes.filter(n => n.id !== sel.id);
+    model.edges = model.edges.filter(e => e.a !== sel.id && e.b !== sel.id);
+  } else {
+    model.edges = model.edges.filter(e => e.id !== sel.id);
+  }
+  sel = null;
+  structureChanged();
+}
+
+function toWorld(ev) {
+  const r = board.getBoundingClientRect();
+  return { x: (ev.clientX - r.left - view.x) / view.k, y: (ev.clientY - r.top - view.y) / view.k };
+}
+function applyView() {
+  world.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
+  $("#zoom-val").textContent = Math.round(view.k * 100) + "%";
+  document.getElementById("dots")
+    .setAttribute("patternTransform", `translate(${view.x},${view.y}) scale(${view.k})`);
+}
+
+function startNodeDrag(ev, nd) {
+  ev.stopPropagation();
+  if (armLink && armLink !== nd.id) {          // ツールバーの「つなぐ」で配線
+    const a = armLink; setArm(null); addEdge(a, nd.id); return;
+  }
+  setArm(null);
+  select("node", nd.id);
+  const start = toWorld(ev), ox = nd.x, oy = nd.y;
+  let moved = false;
+  board.setPointerCapture(ev.pointerId);
+  const move = e2 => {
+    const p = toWorld(e2);
+    nd.x = Math.round(ox + (p.x - start.x)); nd.y = Math.round(oy + (p.y - start.y));
+    moved = true; layout();
+  };
+  const up = () => {
+    board.removeEventListener("pointermove", move);
+    board.removeEventListener("pointerup", up);
+    if (moved) save();
+  };
+  board.addEventListener("pointermove", move);
+  board.addEventListener("pointerup", up);
+}
+
+function startLink(ev, nd) {
+  ev.stopPropagation();
+  linkFrom = nd.id;
+  board.classList.add("linking");
+  ghost.setAttribute("visibility", "visible");
+  board.setPointerCapture(ev.pointerId);
+  const move = e2 => {
+    const p = toWorld(e2), a = nodeOf(linkFrom);
+    const s = border(a, p);
+    ghost.setAttribute("d", `M ${s.x} ${s.y} L ${p.x} ${p.y}`);
+  };
+  const up = e2 => {
+    board.removeEventListener("pointermove", move);
+    board.removeEventListener("pointerup", up);
+    const p = toWorld(e2);
+    const target = model.nodes.find(n => n.id !== linkFrom &&
+      Math.abs(p.x - n.x) < NODE_W / 2 + 12 && Math.abs(p.y - n.y) < NODE_H / 2 + 12);
+    const from = linkFrom;
+    cancelLink();
+    if (target) addEdge(from, target.id);
+  };
+  board.addEventListener("pointermove", move);
+  board.addEventListener("pointerup", up);
+}
+function cancelLink() {
+  linkFrom = null; ghost.setAttribute("visibility", "hidden");
+  board.classList.remove("linking");
+}
+
+board.addEventListener("pointerdown", ev => {
+  if (linkFrom) return;
+  select(null);
+  const sx = ev.clientX, sy = ev.clientY, ox = view.x, oy = view.y;
+  board.classList.add("panning");
+  board.setPointerCapture(ev.pointerId);
+  const move = e2 => { view.x = ox + (e2.clientX - sx); view.y = oy + (e2.clientY - sy); applyView(); };
+  const up = () => {
+    board.classList.remove("panning");
+    board.removeEventListener("pointermove", move);
+    board.removeEventListener("pointerup", up);
+  };
+  board.addEventListener("pointermove", move);
+  board.addEventListener("pointerup", up);
+});
+board.addEventListener("dblclick", ev => {
+  if (ev.target !== board && ev.target.id !== "bg") return;   // 空白のときだけ
+  const p = toWorld(ev); addNode(p.x, p.y);
+});
+board.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  const p = toWorld(ev);
+  const k = Math.max(0.3, Math.min(2.5, view.k * (ev.deltaY < 0 ? 1.12 : 1 / 1.12)));
+  const r = board.getBoundingClientRect();
+  view.x = ev.clientX - r.left - p.x * k; view.y = ev.clientY - r.top - p.y * k;
+  view.k = k; applyView();
+}, { passive: false });
+
+function zoomBy(f) {
+  const r = board.getBoundingClientRect();
+  const cx = r.width / 2, cy = r.height / 2;
+  const p = { x: (cx - view.x) / view.k, y: (cy - view.y) / view.k };
+  view.k = Math.max(0.3, Math.min(2.5, view.k * f));
+  view.x = cx - p.x * view.k; view.y = cy - p.y * view.k;
+  applyView();
+}
+function fitView() {
+  if (!model.nodes.length) { view = { x: 40, y: 40, k: 1 }; return applyView(); }
+  const xs = model.nodes.map(n => n.x), ys = model.nodes.map(n => n.y);
+  const x0 = Math.min(...xs) - NODE_W, x1 = Math.max(...xs) + NODE_W;
+  const y0 = Math.min(...ys) - NODE_H - 26, y1 = Math.max(...ys) + NODE_H + 26;
+  const r = board.getBoundingClientRect();
+  const k = Math.max(0.3, Math.min(1.35, Math.min(r.width / (x1 - x0), r.height / (y1 - y0))));
+  view.k = k;
+  view.x = (r.width - (x1 - x0) * k) / 2 - x0 * k;
+  view.y = (r.height - (y1 - y0) * k) / 2 - y0 * k;
+  applyView();
+}
+/* 整列: 温度固定ノードからの段数で列を作る(発熱側が左) */
+function tidy() {
+  if (!model.nodes.length) return;
+  const adj = {}; model.nodes.forEach(n => { adj[n.id] = []; });
+  model.edges.forEach(e => { if (adj[e.a] && adj[e.b]) { adj[e.a].push(e.b); adj[e.b].push(e.a); } });
+  const depth = {}; const q = [];
+  model.nodes.filter(n => n.fixed).forEach(n => { depth[n.id] = 0; q.push(n.id); });
+  if (!q.length) { depth[model.nodes[0].id] = 0; q.push(model.nodes[0].id); }
+  while (q.length) {
+    const c = q.shift();
+    for (const nb of adj[c]) if (depth[nb] === undefined) { depth[nb] = depth[c] + 1; q.push(nb); }
+  }
+  let maxD = 0;
+  model.nodes.forEach(n => { if (depth[n.id] !== undefined) maxD = Math.max(maxD, depth[n.id]); });
+  model.nodes.forEach(n => { if (depth[n.id] === undefined) depth[n.id] = maxD + 1; });
+  maxD = Math.max(...model.nodes.map(n => depth[n.id]));
+  const cols = {};
+  model.nodes.forEach(n => { (cols[depth[n.id]] = cols[depth[n.id]] || []).push(n); });
+  for (const d of Object.keys(cols)) {
+    const list = cols[d];
+    list.forEach((n, i) => {
+      n.x = 140 + (maxD - Number(d)) * 235;
+      n.y = 160 + (i - (list.length - 1) / 2) * 112;
+    });
+  }
+  layout(); fitView(); save();
+}
+
+document.addEventListener("keydown", ev => {
+  const t = ev.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) {
+    if (ev.key === "Escape") t.blur();
+    return;
+  }
+  if (ev.key === "Delete" || ev.key === "Backspace") { ev.preventDefault(); deleteSelected(); }
+  else if (ev.key === "Escape") { cancelLink(); setArm(null); select(null); }
+  else if (ev.key === "n" || ev.key === "N") {
+    const r = board.getBoundingClientRect();
+    addNode((r.width / 2 - view.x) / view.k, (r.height / 2 - view.y) / view.k);
+  }
+});
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   7. ツールバー・保存・書き出し
+   ===================================================================== */
+let armLink = null;
+function setArm(id) {
+  armLink = id;
+  $("#btn-link").classList.toggle("on", !!id);
+  $("#tip").textContent = id
+    ? "つなぐ相手のノードをクリックしてください(Escape で中止)"
+    : "ノードをドラッグで移動、右端の ＋ を別のノードへドラッグすると熱抵抗でつながります。空白をダブルクリックでノード追加。";
+}
+
+$("#btn-add").addEventListener("click", () => {
+  const r = board.getBoundingClientRect();
+  addNode((r.width / 2 - view.x) / view.k, (r.height / 2 - view.y) / view.k);
+});
+$("#btn-link").addEventListener("click", () => {
+  if (armLink) return setArm(null);
+  if (sel && sel.kind === "node") setArm(sel.id);
+  else $("#tip").textContent = "先につなぎ元のノードをクリックしてから「つなぐ」を押してください。";
+});
+$("#btn-del").addEventListener("click", deleteSelected);
+$("#btn-fit").addEventListener("click", fitView);
+$("#btn-tidy").addEventListener("click", tidy);
+$("#zoom-in").addEventListener("click", () => zoomBy(1.15));
+$("#zoom-out").addEventListener("click", () => zoomBy(1 / 1.15));
+
+/* --- 保存 (この端末のブラウザにだけ残ります) --- */
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify({ model, view })); } catch (err) { /* 保存不可でも動く */ }
+}
+function restore() {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d || !d.model || !Array.isArray(d.model.nodes) || !d.model.nodes.length) return false;
+    model = d.model; model.seq = model.seq || 1;
+    if (d.view) view = d.view;
+    return true;
+  } catch (err) { return false; }
+}
+
+/* --- 例題 --- */
+const PRESETS = {
+  cpu: () => ({
+    seq: 20,
+    nodes: [
+      { id: "n1", name: "ダイ", x: 140, y: 170, q: 95, fixed: false, tf: 25 },
+      { id: "n2", name: "パッケージ", x: 375, y: 170, q: 0, fixed: false, tf: 25 },
+      { id: "n3", name: "ヒートシンク", x: 610, y: 170, q: 0, fixed: false, tf: 25 },
+      { id: "n4", name: "空気", x: 845, y: 170, q: 0, fixed: true, tf: 40 }
+    ],
+    edges: [
+      { id: "e1", a: "n1", b: "n2", r: 0.10 },
+      { id: "e2", a: "n2", b: "n3", r: 0.09 },
+      { id: "e3", a: "n3", b: "n4", r: 0.41 }
+    ]
+  }),
+  wall: () => ({
+    seq: 20,
+    nodes: [
+      { id: "n1", name: "室内空気", x: 140, y: 170, q: 0, fixed: true, tf: 20 },
+      { id: "n2", name: "内表面", x: 375, y: 170, q: 0, fixed: false, tf: 25 },
+      { id: "n3", name: "外表面", x: 610, y: 170, q: 0, fixed: false, tf: 25 },
+      { id: "n4", name: "外気", x: 845, y: 170, q: 0, fixed: true, tf: -5 }
+    ],
+    edges: [
+      { id: "e1", a: "n1", b: "n2", r: 0.11 },
+      { id: "e2", a: "n2", b: "n3", r: 2.20 },
+      { id: "e3", a: "n3", b: "n4", r: 0.04 }
+    ]
+  }),
+  parallel: () => ({
+    seq: 20,
+    nodes: [
+      { id: "n1", name: "発熱体", x: 150, y: 200, q: 30, fixed: false, tf: 25 },
+      { id: "n2", name: "ベース", x: 470, y: 200, q: 0, fixed: false, tf: 25 },
+      { id: "n3", name: "外気", x: 760, y: 200, q: 0, fixed: true, tf: 25 }
+    ],
+    edges: [
+      { id: "e1", a: "n1", b: "n2", r: 1.20 },
+      { id: "e2", a: "n1", b: "n2", r: 3.00 },
+      { id: "e3", a: "n2", b: "n3", r: 0.40 }
+    ]
+  }),
+  blank: () => ({
+    seq: 3,
+    nodes: [
+      { id: "n1", name: "発熱部", x: 200, y: 180, q: 10, fixed: false, tf: 25 },
+      { id: "n2", name: "外気", x: 520, y: 180, q: 0, fixed: true, tf: 25 }
+    ],
+    edges: [{ id: "e1", a: "n1", b: "n2", r: 1.0 }]
+  })
+};
+function loadPreset(key) {
+  const p = PRESETS[key]; if (!p) return;
+  model = p(); sel = null; setArm(null);
+  builtKey = ""; buildInspector(true);
+  rebuild(); fitView();
+}
+$("#preset").addEventListener("change", ev => {
+  const v = ev.target.value;
+  if (v) loadPreset(v);
+  ev.target.value = "";
+});
+
+/* --- 書き出し / 読み込み --- */
+function slug(name, i) {
+  const base = (name || "").replace(/[^0-9A-Za-z_]+/g, "");
+  return (base ? base.toLowerCase() : "n") + "_" + (i + 1);
+}
+function toYaml() {
+  const ids = {};
+  model.nodes.forEach((n, i) => { ids[n.id] = slug(n.name, i); });
+  const num = v => +Number(v).toPrecision(12);
+  const L = [];
+  L.push("# 熱回路ベンチから書き出し --- python -m thermalnet.model <file> でそのまま解けます");
+  L.push("name: thermal bench model");
+  L.push("nodes:");
+  for (const n of model.nodes) {
+    const key = "  " + ids[n.id];
+    const cm = "   # " + n.name;
+    if (n.fixed) { L.push(key + ":" + cm); L.push("    fixed: " + num(n.tf || 0)); }
+    else if (Number(n.q)) { L.push(key + ":" + cm); L.push("    heat: " + num(n.q)); }
+    else L.push(key + ": {}" + cm);
+  }
+  L.push("elements:");
+  for (const e of model.edges) {
+    const a = nodeOf(e.a), b = nodeOf(e.b);
+    if (!a || !b) continue;
+    L.push("  - name: " + a.name + " -> " + b.name);
+    L.push("    from: " + ids[e.a]);
+    L.push("    to: " + ids[e.b]);
+    L.push("    type: resistance");
+    L.push("    value: " + num(e.r));
+  }
+  return L.join("\n") + "\n";
+}
+
+const dlg = $("#dlg");
+function openDlg(title, text, loadable) {
+  $("#dlg-title").textContent = title;
+  $("#dlg-text").value = text;
+  $("#dlg-load").hidden = !loadable;
+  $("#dlg-msg").textContent = "";
+  dlg.showModal();
+}
+$("#btn-yaml").addEventListener("click", () => openDlg("YAML で書き出す(Python 版で計算できます)", toYaml(), false));
+$("#btn-json").addEventListener("click", () =>
+  openDlg("JSON(保存・読み込み)", JSON.stringify({ nodes: model.nodes, edges: model.edges }, null, 2), true));
+$("#dlg-x").addEventListener("click", () => dlg.close());
+$("#dlg-copy").addEventListener("click", () => {
+  const ta = $("#dlg-text");
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (err) { ok = false; }
+  if (!ok && navigator.clipboard) { navigator.clipboard.writeText(ta.value).then(() => {}, () => {}); ok = true; }
+  $("#dlg-msg").textContent = ok ? "コピーしました" : "選択してから Ctrl+C でコピーしてください";
+});
+$("#dlg-load").addEventListener("click", () => {
+  try {
+    const d = JSON.parse($("#dlg-text").value);
+    if (!d || !Array.isArray(d.nodes) || !Array.isArray(d.edges)) throw new Error("nodes と edges が必要です");
+    const nodes = d.nodes.map((n, i) => ({
+      id: String(n.id || "n" + i), name: String(n.name || "ノード" + (i + 1)),
+      x: Number(n.x) || 0, y: Number(n.y) || 0, q: Number(n.q) || 0,
+      fixed: !!n.fixed, tf: Number(n.tf) || 0
+    }));
+    const known = new Set(nodes.map(n => n.id));
+    const edges = d.edges.filter(e => known.has(e.a) && known.has(e.b)).map((e, i) => ({
+      id: String(e.id || "e" + i), a: e.a, b: e.b, r: Number(e.r)
+    }));
+    model = { seq: nodes.length + edges.length + 1, nodes, edges };
+    sel = null; setArm(null); builtKey = ""; buildInspector(true);
+    rebuild(); fitView(); dlg.close();
+  } catch (err) {
+    $("#dlg-msg").textContent = "読み込めませんでした: " + err.message;
+  }
+});
+
+/* =====================================================================
+   8. 起動
+   ===================================================================== */
+$("#tip").addEventListener("click", () => { $("#tip").hidden = true; });
+
+const restored = restore();
+if (!restored) model = PRESETS.cpu();
+setArm(null);
+buildInspector(true);
+rebuild();
+applyView();
+if (!restored) requestAnimationFrame(fitView);
+</script>
